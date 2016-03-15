@@ -14,6 +14,7 @@ import Data.Binary.Strict.BitGet
 import Data.ByteString
 import Data.Int
 import Data.Word
+import Network.AIS.Vocabulary
 
 getAsInt8 :: Int -> BitGet Int8
 getAsInt8 n = do
@@ -43,10 +44,6 @@ getAsInt64 n = do
                  let y' = fromIntegral y `shiftR` (64 - n)
                  return y'  
 
-type MessageID = Word8
-type MMSI = Word32
-type NavigationalStatus = Word8
-
 data ClassAPositionReport = ClassAPositionReport
                           {
                             messageType :: MessageID
@@ -63,16 +60,57 @@ data ClassAPositionReport = ClassAPositionReport
                           , timeStamp :: Word8
                           , manueverIndicator :: Word8
                           , raimFlag :: Bool
-                          , communicationState :: Word32
+                          , communicationsState :: CommunicationsState
                           }
   deriving (Eq, Show)
 
+getMessageType :: BitGet MessageID
+getMessageType = fmap (toEnum . fromIntegral) $ getAsWord8 6
+
+getNavigationalStatus :: BitGet NavigationalStatus
+getNavigationalStatus = fmap (toEnum . fromIntegral) $ getAsWord8 4
+
+getMMSI :: BitGet MMSI
+getMMSI = fmap MMSI $ getAsWord32 30
+
+getSyncState :: BitGet SyncState
+getSyncState = fmap (toEnum . fromIntegral) $ getAsWord8 2
+
+getSOTDMACommunicationsState :: BitGet CommunicationsState
+getSOTDMACommunicationsState = do
+                                 syncState <- getSyncState
+                                 slotTimeout <- getAsWord8 3
+                                 submessage <- getSubmessage slotTimeout
+                                 return $ SOTDMA { .. }
+
+getSubmessage :: Word8 -> BitGet SOTDMASubmessage
+getSubmessage 0 = fmap SlotOffset $ getAsWord16 14
+getSubmessage 1 = do
+                    hour <- getAsWord8 5
+                    minute <- getAsWord8 7
+                    return $ UTCHourAndMinute hour minute
+getSubmessage n | even n = fmap SlotNumber $ getAsWord16 14
+                | otherwise = fmap ReceivedStations $ getAsWord16 14
+
+getITDMACommunicationsState :: BitGet CommunicationsState
+getITDMACommunicationsState = do
+                                syncState <- getSyncState
+                                slotIncrement' <- getAsWord16 13
+                                numberOfSlots' <- getAsWord8 3
+                                keep <- getBit
+                                let (slotIncrement, numberOfSlots) = parseIncrementAndSlots slotIncrement' numberOfSlots'
+                                return $ ITDMA { .. }
+  where
+    parseIncrementAndSlots :: Word16 -> Word8 -> (Word16, Word8)
+    parseIncrementAndSlots inc n | n <= 4    = (inc, n + 1)
+                                 | otherwise = (inc + 8192, n - 4)
+
 getClassAPositionReport :: BitGet ClassAPositionReport
 getClassAPositionReport = do
-                            messageType <- getAsWord8 6
+                            messageType <- getMessageType
                             repeatIndicator <- getAsWord8 2
-                            userID <- getAsWord32 30
-                            navigationalStatus <- getAsWord8 4
+                            userID <- getMMSI
+                            navigationalStatus <- getNavigationalStatus
                             rateOfTurn <- getAsInt8 8
                             speedOverGround <- getAsWord16 10
                             positionAccuracy <- getBit
@@ -84,8 +122,8 @@ getClassAPositionReport = do
                             manueverIndicator <- getAsWord8 2
                             skip 3
                             raimFlag <- getBit
-                            communicationState <- getAsWord32 19
-                            return $ ClassAPositionReport { ..}
+                            communicationsState <- getSOTDMACommunicationsState
+                            return $ ClassAPositionReport { .. }
 
 example :: ByteString
 example = pack [0b00000100, 0b00110000, 0b11110101, 0b01000011, 0b01111011, 0b11100000, 0b00000000,
