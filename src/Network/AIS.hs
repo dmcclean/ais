@@ -1,20 +1,37 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Network.AIS
 (
-  ClassAPositionReport
+  AisMessage
 , getClassAPositionReport
 , example
 )
 where
 
+import Control.Monad
 import Data.Bits
 import Data.Binary.Strict.BitGet
-import Data.ByteString
+import Data.ByteString as BS
 import Data.Int
+import Data.Text as T
 import Data.Word
 import Network.AIS.Vocabulary
+
+sixBitCharacters :: Text
+sixBitCharacters = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^- !\"#$%&`()*+,-./0123456789:;<=>?"
+
+-- | Gets a 6-bit character string whose length is specified in characters.
+getSixBitText :: Int -> BitGet Text
+getSixBitText n = do
+                    cs <- replicateM n $ fmap (T.index sixBitCharacters . fromIntegral) $ getAsWord8 6
+                    return $ T.pack cs
+
+getRemainingSixBitText :: BitGet Text
+getRemainingSixBitText = do
+                           bits <- remaining
+                           getSixBitText $ bits `div` 6
 
 getAsInt8 :: Int -> BitGet Int8
 getAsInt8 n = do
@@ -44,28 +61,42 @@ getAsInt64 n = do
                  let y' = fromIntegral y `shiftR` (64 - n)
                  return y'  
 
-data ClassAPositionReport = ClassAPositionReport
-                          {
-                            messageType :: MessageID
-                          , repeatIndicator :: Word8
-                          , userID :: MMSI
-                          , navigationalStatus :: NavigationalStatus
-                          , rateOfTurn :: Int8
-                          , speedOverGround :: Word16
-                          , positionAccuracy :: Bool
-                          , longitude :: Int32
-                          , latitude :: Int32
-                          , courseOverGround :: Word16
-                          , trueHeading :: Word16
-                          , timeStamp :: Word8
-                          , manueverIndicator :: Word8
-                          , raimFlag :: Bool
-                          , communicationsState :: CommunicationsState
-                          }
+data AisMessage = ClassAPositionReport
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , navigationalStatus :: NavigationalStatus
+                  , rateOfTurn :: Int8
+                  , speedOverGround :: Word16
+                  , positionAccuracy :: Bool
+                  , longitude :: Int32
+                  , latitude :: Int32
+                  , courseOverGround :: Word16
+                  , trueHeading :: Word16
+                  , timeStamp :: Word8
+                  , manueverIndicator :: Word8
+                  , raimFlag :: Bool
+                  , communicationsState :: CommunicationsState
+                  }
+                | AddressedSafetyRelatedMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , sequenceNumber :: Word8
+                  , destinationID :: MMSI
+                  , retransmitFlag :: Bool
+                  , safetyRelatedText :: Text                                     
+                  }
+                | SafetyRelatedBroadcastMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , safetyRelatedText :: Text
+                  }
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
-getMessageType = fmap (toEnum . fromIntegral) $ getAsWord8 6
+getMessageType = fmap (toEnum . subtract 1 . fromIntegral) $ getAsWord8 6
 
 getNavigationalStatus :: BitGet NavigationalStatus
 getNavigationalStatus = fmap (toEnum . fromIntegral) $ getAsWord8 4
@@ -105,7 +136,7 @@ getITDMACommunicationsState = do
     parseIncrementAndSlots inc n | n <= 4    = (inc, n + 1)
                                  | otherwise = (inc + 8192, n - 4)
 
-getClassAPositionReport :: BitGet ClassAPositionReport
+getClassAPositionReport :: BitGet AisMessage
 getClassAPositionReport = do
                             messageType <- getMessageType
                             repeatIndicator <- getAsWord8 2
@@ -122,10 +153,35 @@ getClassAPositionReport = do
                             manueverIndicator <- getAsWord8 2
                             skip 3
                             raimFlag <- getBit
-                            communicationsState <- getSOTDMACommunicationsState
+                            communicationsState <- case messageType of
+                                                     MScheduledClassAPositionReport -> getSOTDMACommunicationsState
+                                                     MAssignedScheduledClassAPositionReport -> getSOTDMACommunicationsState
+                                                     MSpecialClassAPositionReport -> getITDMACommunicationsState
+                                                     _ -> getSOTDMACommunicationsState
                             return $ ClassAPositionReport { .. }
 
+getAddressedSafetyRelatedMessage :: BitGet AisMessage
+getAddressedSafetyRelatedMessage = do
+                                     messageType <- getMessageType
+                                     repeatIndicator <- getAsWord8 2
+                                     sourceID <- getMMSI
+                                     sequenceNumber <- getAsWord8 2
+                                     destinationID <- getMMSI
+                                     retransmitFlag <- getBit
+                                     skip 1
+                                     safetyRelatedText <- getRemainingSixBitText
+                                     return $ AddressedSafetyRelatedMessage { .. }
+
+getSafetyRelatedBroadcastMessage :: BitGet AisMessage
+getSafetyRelatedBroadcastMessage = do
+                                     messageType <- getMessageType
+                                     repeatIndicator <- getAsWord8 2
+                                     sourceID <- getMMSI
+                                     skip 2
+                                     safetyRelatedText <- getRemainingSixBitText
+                                     return $ SafetyRelatedBroadcastMessage { .. }
+
 example :: ByteString
-example = pack [0b00000100, 0b00110000, 0b11110101, 0b01000011, 0b01111011, 0b11100000, 0b00000000,
-                0b00001000, 0b00010100, 0b00101100, 0b10000010, 0b00011101, 0b01010000, 0b01010111,
-                0b01100100, 0b01010011, 0b11111111, 0b11010000, 0b00001001, 0b01000001, 0b11110011]
+example = BS.pack [0b00000100, 0b00110000, 0b11110101, 0b01000011, 0b01111011, 0b11100000, 0b00000000,
+                   0b00001000, 0b00010100, 0b00101100, 0b10000010, 0b00011101, 0b01010000, 0b01010111,
+                   0b01100100, 0b01010011, 0b11111111, 0b11010000, 0b00001001, 0b01000001, 0b11110011]
