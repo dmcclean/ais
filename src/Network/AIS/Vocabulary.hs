@@ -22,7 +22,7 @@ data MessageID = MScheduledClassAPositionReport
                | MBinaryBroadcastMessage
                | MStandardSARAircraftPositionReport
                | MTimeInquiry
-               | MTimeRepsonse
+               | MTimeResponse
                | MAddressedSafetyRelatedMessage
                | MSafetyRelatedAcknowledgement
                | MSafetyRelatedBroadcastMessage

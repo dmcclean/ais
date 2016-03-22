@@ -107,6 +107,25 @@ data AisMessage = ClassAPositionReport
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
                   }
+                | TimeInquiry
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , destinationID :: MMSI
+                  }
+                | TimeResponse
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , utcTime :: UTCTime
+                  , positionAccuracy :: Bool
+                  , longitude :: Int32
+                  , latitude :: Int32
+                  , positionFixingDevice :: PositionFixingDevice
+                  , doNotSuppressLongRangeMessages :: Bool
+                  , raimFlag :: Bool
+                  , communicationsState :: CommunicationsState
+                  }
                 | ClassAStaticData
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
@@ -183,6 +202,8 @@ getMessage = do
                  MStaticAndVoyageData -> getClassAStaticData
                  MAddressedSafetyRelatedMessage -> getAddressedSafetyRelatedMessage
                  MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
+                 MTimeInquiry -> getTimeInquiry
+                 MTimeResponse -> getTimeResponse
                  _ -> undefined 
 
 getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
@@ -246,6 +267,38 @@ getBaseStationReportMessage = do
                                 communicationsState <- getSOTDMACommunicationsState
                                 let utcTime = makeUtcTime year month day hour minute second
                                 return $ BaseStationReport { .. }
+
+getTimeInquiry :: BitGet AisMessage
+getTimeInquiry = do
+                   let messageType = MTimeInquiry
+                   repeatIndicator <- getAsWord8 2
+                   sourceID <- getMMSI
+                   skip 2
+                   destinationID <- getMMSI
+                   skip 2
+                   return $ TimeInquiry { .. }
+
+getTimeResponse :: BitGet AisMessage
+getTimeResponse = do
+                    let messageType = MTimeResponse
+                    repeatIndicator <- getAsWord8 2
+                    userID <- getMMSI
+                    year <- getAsWord16 14
+                    month <- getAsWord16 4
+                    day <- getAsWord16 5
+                    hour <- getAsWord16 5
+                    minute <- getAsWord16 6
+                    second <- getAsWord16 6
+                    positionAccuracy <- getBit
+                    longitude <- getAsInt32 28
+                    latitude <- getAsInt32 27
+                    positionFixingDevice <- getPositionFixingDevice
+                    doNotSuppressLongRangeMessages <- getBit
+                    skip 9
+                    raimFlag <- getBit
+                    communicationsState <- getSOTDMACommunicationsState
+                    let utcTime = makeUtcTime year month day hour minute second
+                    return $ TimeResponse { .. }
 
 getClassAStaticData :: BitGet AisMessage
 getClassAStaticData = do
