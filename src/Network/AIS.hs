@@ -135,7 +135,7 @@ data AisMessage = ClassAPositionReport
                   , callSign :: Text
                   , name :: Text
                   , typeOfShipAndCargo :: Word8
-                  , overallDimension :: Word32
+                  , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   , eta :: Word32
                   , draught :: Word8
@@ -155,6 +155,14 @@ getMMSI = fmap MMSI $ getAsWord32 30
 
 getSyncState :: BitGet SyncState
 getSyncState = fmap (toEnum . fromIntegral) $ getAsWord8 2
+
+getVesselDimensions :: BitGet VesselDimensions
+getVesselDimensions = do
+                        forwardOfReferencePoint <- getAsWord16 9
+                        aftOfReferencePoint <- getAsWord16 9
+                        portOfReferencePoint <- getAsWord16 6
+                        starboardOfReferencePoint <- getAsWord16 6
+                        return $ VesselDimensions { .. }
 
 getPositionFixingDevice :: BitGet PositionFixingDevice
 getPositionFixingDevice = fmap (f . fromIntegral) $ getAsWord8 4
@@ -310,7 +318,7 @@ getClassAStaticData = do
                         callSign <- getSixBitText 7
                         name <- getSixBitText 20
                         typeOfShipAndCargo <- getAsWord8 8
-                        overallDimension <- getAsWord32 30
+                        vesselDimensions <- getVesselDimensions
                         positionFixingDevice <- getPositionFixingDevice
                         eta <- getAsWord32 20
                         draught <- getAsWord8 8

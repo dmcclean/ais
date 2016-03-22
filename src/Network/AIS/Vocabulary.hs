@@ -91,3 +91,16 @@ data PositionFixingDevice = PosFixUndefined
                           | PosFixGalileo
                           | PosFixInternalGnss
   deriving (Eq, Ord, Enum, Show, Read)
+
+data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: Word16
+                                         , aftOfReferencePoint :: Word16
+                                         , portOfReferencePoint :: Word16
+                                         , starboardOfReferencePoint :: Word16
+                                         }
+  deriving (Eq, Show)
+
+overallLength :: VesselDimensions -> Word16
+overallLength dims = forwardOfReferencePoint dims + aftOfReferencePoint dims
+
+overallBeam :: VesselDimensions -> Word16
+overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
