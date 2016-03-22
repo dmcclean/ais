@@ -172,9 +172,21 @@ getITDMACommunicationsState = do
     parseIncrementAndSlots inc n | n <= 4    = (inc, n + 1)
                                  | otherwise = (inc + 8192, n - 4)
 
-getClassAPositionReport :: BitGet AisMessage
-getClassAPositionReport = do
-                            messageType <- getMessageType
+getMessage :: BitGet AisMessage
+getMessage = do
+               messageType <- getMessageType
+               case messageType of
+                 MScheduledClassAPositionReport -> getClassAPositionReport MScheduledClassAPositionReport getSOTDMACommunicationsState
+                 MAssignedScheduledClassAPositionReport -> getClassAPositionReport MAssignedScheduledClassAPositionReport getSOTDMACommunicationsState
+                 MSpecialClassAPositionReport -> getClassAPositionReport MSpecialClassAPositionReport getITDMACommunicationsState
+                 MBaseStationReport -> getBaseStationReportMessage
+                 MStaticAndVoyageData -> getClassAStaticData
+                 MAddressedSafetyRelatedMessage -> getAddressedSafetyRelatedMessage
+                 MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
+                 _ -> undefined 
+
+getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
+getClassAPositionReport messageType getCommState = do
                             repeatIndicator <- getAsWord8 2
                             userID <- getMMSI
                             navigationalStatus <- getNavigationalStatus
@@ -189,16 +201,12 @@ getClassAPositionReport = do
                             manueverIndicator <- getAsWord8 2
                             skip 3
                             raimFlag <- getBit
-                            communicationsState <- case messageType of
-                                                     MScheduledClassAPositionReport -> getSOTDMACommunicationsState
-                                                     MAssignedScheduledClassAPositionReport -> getSOTDMACommunicationsState
-                                                     MSpecialClassAPositionReport -> getITDMACommunicationsState
-                                                     _ -> getSOTDMACommunicationsState
+                            communicationsState <- getCommState
                             return $ ClassAPositionReport { .. }
 
 getAddressedSafetyRelatedMessage :: BitGet AisMessage
 getAddressedSafetyRelatedMessage = do
-                                     messageType <- getMessageType
+                                     let messageType = MAddressedSafetyRelatedMessage
                                      repeatIndicator <- getAsWord8 2
                                      sourceID <- getMMSI
                                      sequenceNumber <- getAsWord8 2
@@ -210,7 +218,7 @@ getAddressedSafetyRelatedMessage = do
 
 getSafetyRelatedBroadcastMessage :: BitGet AisMessage
 getSafetyRelatedBroadcastMessage = do
-                                     messageType <- getMessageType
+                                     let messageType = MSafetyRelatedBroadcastMessage
                                      repeatIndicator <- getAsWord8 2
                                      sourceID <- getMMSI
                                      skip 2
@@ -219,7 +227,7 @@ getSafetyRelatedBroadcastMessage = do
 
 getBaseStationReportMessage :: BitGet AisMessage
 getBaseStationReportMessage = do
-                                messageType <- getMessageType
+                                let messageType = MBaseStationReport
                                 repeatIndicator <- getAsWord8 2
                                 userID <- getMMSI
                                 year <- getAsWord16 14
@@ -241,7 +249,7 @@ getBaseStationReportMessage = do
 
 getClassAStaticData :: BitGet AisMessage
 getClassAStaticData = do
-                        messageType <- getMessageType
+                        let messageType = MStaticAndVoyageData
                         repeatIndicator <- getAsWord8 2
                         userID <- getMMSI
                         aisVersionIndicator <- getAsWord8 2
