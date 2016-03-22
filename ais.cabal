@@ -28,6 +28,7 @@ library
                        bytestring,
                        dimensional >= 1.0.1.1,
                        attoparsec,
-                       text
+                       text,
+                       time
   hs-source-dirs:      src
   default-language:    Haskell2010

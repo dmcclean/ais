@@ -2,9 +2,13 @@ module Network.AIS.Vocabulary
 where
 
 import Data.Word
+import Text.Printf
 
 newtype MMSI = MMSI Word32
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
+
+instance Show MMSI where
+  show (MMSI n) = printf "MMSI %0.9d" n
 
 type RepeatIndicator = Word8
 
@@ -75,3 +79,15 @@ data SOTDMASubmessage = ReceivedStations Word16
                       | UTCHourAndMinute Word8 Word8
                       | SlotOffset Word16
   deriving (Eq, Ord, Show, Read)
+
+data PositionFixingDevice = PosFixUndefined
+                          | PosFixGps
+                          | PosFixGlonass
+                          | PosFixGpsGlonass
+                          | PosFixLoranC
+                          | PosFixChayka
+                          | PosFixIntegratedNavigationSystem
+                          | PosFixSurveyed
+                          | PosFixGalileo
+                          | PosFixInternalGnss
+  deriving (Eq, Ord, Enum, Show, Read)

@@ -16,6 +16,7 @@ import Data.Binary.Strict.BitGet
 import Data.ByteString as BS
 import Data.Int
 import Data.Text as T
+import Data.Time
 import Data.Word
 import Network.AIS.Vocabulary
 
@@ -93,6 +94,35 @@ data AisMessage = ClassAPositionReport
                   , sourceID :: MMSI
                   , safetyRelatedText :: Text
                   }
+                | BaseStationReport
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , utcTime :: UTCTime
+                  , positionAccuracy :: Bool
+                  , longitude :: Int32
+                  , latitude :: Int32
+                  , positionFixingDevice :: PositionFixingDevice
+                  , doNotSuppressLongRangeMessages :: Bool
+                  , raimFlag :: Bool
+                  , communicationsState :: CommunicationsState
+                  }
+                | ClassAStaticData
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , aisVersionIndicator :: Word8
+                  , imoNumber :: Word32
+                  , callSign :: Text
+                  , name :: Text
+                  , typeOfShipAndCargo :: Word8
+                  , overallDimension :: Word32
+                  , positionFixingDevice :: PositionFixingDevice
+                  , eta :: Word32
+                  , draught :: Word8
+                  , destination :: Text
+                  , dteNotReady :: Bool
+                  }
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -106,6 +136,12 @@ getMMSI = fmap MMSI $ getAsWord32 30
 
 getSyncState :: BitGet SyncState
 getSyncState = fmap (toEnum . fromIntegral) $ getAsWord8 2
+
+getPositionFixingDevice :: BitGet PositionFixingDevice
+getPositionFixingDevice = fmap (f . fromIntegral) $ getAsWord8 4
+  where
+    f 15 = PosFixInternalGnss
+    f n = toEnum n
 
 getSOTDMACommunicationsState :: BitGet CommunicationsState
 getSOTDMACommunicationsState = do
@@ -180,6 +216,59 @@ getSafetyRelatedBroadcastMessage = do
                                      skip 2
                                      safetyRelatedText <- getRemainingSixBitText
                                      return $ SafetyRelatedBroadcastMessage { .. }
+
+getBaseStationReportMessage :: BitGet AisMessage
+getBaseStationReportMessage = do
+                                messageType <- getMessageType
+                                repeatIndicator <- getAsWord8 2
+                                userID <- getMMSI
+                                year <- getAsWord16 14
+                                month <- getAsWord16 4
+                                day <- getAsWord16 5
+                                hour <- getAsWord16 5
+                                minute <- getAsWord16 6
+                                second <- getAsWord16 6
+                                positionAccuracy <- getBit
+                                longitude <- getAsInt32 28
+                                latitude <- getAsInt32 27
+                                positionFixingDevice <- getPositionFixingDevice
+                                doNotSuppressLongRangeMessages <- getBit
+                                skip 9
+                                raimFlag <- getBit
+                                communicationsState <- getSOTDMACommunicationsState
+                                let utcTime = makeUtcTime year month day hour minute second
+                                return $ BaseStationReport { .. }
+
+getClassAStaticData :: BitGet AisMessage
+getClassAStaticData = do
+                        messageType <- getMessageType
+                        repeatIndicator <- getAsWord8 2
+                        userID <- getMMSI
+                        aisVersionIndicator <- getAsWord8 2
+                        imoNumber <- getAsWord32 30
+                        callSign <- getSixBitText 7
+                        name <- getSixBitText 20
+                        typeOfShipAndCargo <- getAsWord8 8
+                        overallDimension <- getAsWord32 30
+                        positionFixingDevice <- getPositionFixingDevice
+                        eta <- getAsWord32 20
+                        draught <- getAsWord8 8
+                        destination <- getSixBitText 20
+                        dteNotReady <- getBit
+                        skip 1
+                        return $ ClassAStaticData { .. }
+
+makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> UTCTime
+makeUtcTime y mo d h m s = UTCTime { .. }
+  where
+    y' = fromIntegral y
+    mo' = fromIntegral mo
+    d' = fromIntegral d
+    h' = fromIntegral h
+    m' = fromIntegral m
+    s' = fromIntegral s
+    utctDay = fromGregorian y' mo' d'
+    utctDayTime = secondsToDiffTime $ s' + 60 * m' + 60 * 60 * h'
 
 example :: ByteString
 example = BS.pack [0b00000100, 0b00110000, 0b11110101, 0b01000011, 0b01111011, 0b11100000, 0b00000000,
