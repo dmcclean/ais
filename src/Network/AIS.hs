@@ -1,6 +1,8 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Network.AIS
 (
@@ -14,11 +16,21 @@ import Control.Monad
 import Data.Bits
 import Data.Binary.Strict.BitGet
 import Data.ByteString as BS
+import qualified Data.ExactPi.TypeLevel as E
 import Data.Int
 import Data.Text as T
 import Data.Time
 import Data.Word
 import Network.AIS.Vocabulary
+import Numeric.Units.Dimensional.Coercion
+import Numeric.Units.Dimensional.FixedPoint hiding ((*),(+),(-),(/))
+import Numeric.Units.Dimensional.Quantities
+
+type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
+type Latitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
+type Longitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
+type Latitude = PlaneAngle Double
+type Longitude = PlaneAngle Double
 
 sixBitCharacters :: Text
 sixBitCharacters = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^- !\"#$%&`()*+,-./0123456789:;<=>?"
@@ -33,6 +45,16 @@ getRemainingSixBitText :: BitGet Text
 getRemainingSixBitText = do
                            bits <- remaining
                            getSixBitText $ bits `div` 6
+
+getLatitude :: BitGet Latitude
+getLatitude = do
+                raw <- getAsInt32 27
+                return $ changeRep $ (coerce raw :: Latitude')
+
+getLongitude :: BitGet Longitude
+getLongitude = do
+                 raw <- getAsInt32 28
+                 return $ changeRep $ (coerce raw :: Longitude')
 
 getAsInt8 :: Int -> BitGet Int8
 getAsInt8 n = do
@@ -70,8 +92,8 @@ data AisMessage = ClassAPositionReport
                   , rateOfTurn :: Int8
                   , speedOverGround :: Word16
                   , positionAccuracy :: Bool
-                  , longitude :: Int32
-                  , latitude :: Int32
+                  , longitude :: Longitude
+                  , latitude :: Latitude
                   , courseOverGround :: Word16
                   , trueHeading :: Word16
                   , timeStamp :: Word8
@@ -100,8 +122,8 @@ data AisMessage = ClassAPositionReport
                   , userID :: MMSI
                   , utcTime :: UTCTime
                   , positionAccuracy :: Bool
-                  , longitude :: Int32
-                  , latitude :: Int32
+                  , longitude :: Longitude
+                  , latitude :: Latitude
                   , positionFixingDevice :: PositionFixingDevice
                   , doNotSuppressLongRangeMessages :: Bool
                   , raimFlag :: Bool
@@ -119,8 +141,8 @@ data AisMessage = ClassAPositionReport
                   , userID :: MMSI
                   , utcTime :: UTCTime
                   , positionAccuracy :: Bool
-                  , longitude :: Int32
-                  , latitude :: Int32
+                  , longitude :: Longitude
+                  , latitude :: Latitude
                   , positionFixingDevice :: PositionFixingDevice
                   , doNotSuppressLongRangeMessages :: Bool
                   , raimFlag :: Bool
@@ -222,8 +244,8 @@ getClassAPositionReport messageType getCommState = do
                             rateOfTurn <- getAsInt8 8
                             speedOverGround <- getAsWord16 10
                             positionAccuracy <- getBit
-                            longitude <- getAsInt32 28
-                            latitude <- getAsInt32 27
+                            longitude <- getLongitude
+                            latitude <- getLatitude
                             courseOverGround <- getAsWord16 12
                             trueHeading <- getAsWord16 9
                             timeStamp <- getAsWord8 6
@@ -266,8 +288,8 @@ getBaseStationReportMessage = do
                                 minute <- getAsWord16 6
                                 second <- getAsWord16 6
                                 positionAccuracy <- getBit
-                                longitude <- getAsInt32 28
-                                latitude <- getAsInt32 27
+                                longitude <- getLongitude
+                                latitude <- getLatitude
                                 positionFixingDevice <- getPositionFixingDevice
                                 doNotSuppressLongRangeMessages <- getBit
                                 skip 9
@@ -298,8 +320,8 @@ getTimeResponse = do
                     minute <- getAsWord16 6
                     second <- getAsWord16 6
                     positionAccuracy <- getBit
-                    longitude <- getAsInt32 28
-                    latitude <- getAsInt32 27
+                    longitude <- getLongitude
+                    latitude <- getLatitude
                     positionFixingDevice <- getPositionFixingDevice
                     doNotSuppressLongRangeMessages <- getBit
                     skip 9
