@@ -1,7 +1,14 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
+
 module Network.AIS.Vocabulary
 where
 
+import qualified Data.ExactPi.TypeLevel as E
+import Data.Int
 import Data.Word
+import Numeric.Units.Dimensional.FixedPoint hiding ((+))
+import Numeric.Units.Dimensional.Quantities
 import Text.Printf
 
 newtype MMSI = MMSI Word32
@@ -91,6 +98,10 @@ data PositionFixingDevice = PosFixUndefined
                           | PosFixGalileo
                           | PosFixInternalGnss
   deriving (Eq, Ord, Enum, Show, Read)
+
+type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
+type Latitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
+type Longitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 
 data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: Word16
                                          , aftOfReferencePoint :: Word16

@@ -1,8 +1,6 @@
 {-# LANGUAGE BinaryLiterals #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Network.AIS
 (
@@ -22,13 +20,10 @@ import Data.Text as T
 import Data.Time
 import Data.Word
 import Network.AIS.Vocabulary
-import Numeric.Units.Dimensional.Coercion
-import Numeric.Units.Dimensional.FixedPoint hiding ((*),(+),(-),(/))
+import Numeric.Units.Dimensional.FixedPoint (changeRep)
 import Numeric.Units.Dimensional.Quantities
+import Numeric.Units.Dimensional.Coercion
 
-type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
-type Latitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
-type Longitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 type Latitude = PlaneAngle Double
 type Longitude = PlaneAngle Double
 
