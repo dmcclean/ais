@@ -99,6 +99,56 @@ data PositionFixingDevice = PosFixUndefined
                           | PosFixInternalGnss
   deriving (Eq, Enum, Show, Read)
 
+data PositionFixingStatus = PosStatusNormal
+                          | PosStatusManual
+                          | PosStatusEstimated
+                          | PosStatusInoperative
+  deriving (Eq, Enum, Show, Read)
+
+data AidToNavigation = AidUnspecified
+                     | AidReferencePoint
+                     | AidRacon
+                     | AidFixedOffshoreStructure
+                     | AidEmergencyWreckMarkingBuoy
+                     | AidLightWithoutSectors
+                     | AidLightWithSectors
+                     | AidLeadingLightFront
+                     | AidLeadingLightRear
+                     | AidBeaconCardinalN
+                     | AidBeaconCardinalE
+                     | AidBeaconCardinalS
+                     | AidBeaconCardinalW
+                     | AidBeaconPortHand
+                     | AidBeaconStarboardHand
+                     | AidBeaconPreferredChannelPortHand
+                     | AidBeaconPreferredChannelStarboardHand
+                     | AidBeaconIsolatedDanger
+                     | AidBeaconSafeWater
+                     | AidBeaconSpecialMark
+                     | AidCardinalMarkN
+                     | AidCardinalMarkE
+                     | AidCardinalMarkS
+                     | AidCardinalMarkW
+                     | AidPortHandMark
+                     | AidStarboardHandMark
+                     | AidPreferredChannelPortHand
+                     | AidPreferredChannelStarboardHand
+                     | AidIsolatedDanger
+                     | AidSafeWater
+                     | AidSpecialMark
+                     | AidLightVesselLanbyRig
+  deriving (Eq, Enum, Show, Read)
+
+isFixedAtoN :: AidToNavigation -> Bool
+isFixedAtoN aid = 5 <= x && x <= 19
+  where
+    x = fromEnum aid
+
+isFloatingAtoN :: AidToNavigation -> Bool
+isFloatingAtoN aid = 20 <= x
+  where
+    x = fromEnum aid
+
 data AltitudeSensor = AltGnss
                     | AltBarometric
   deriving (Eq, Enum, Show, Read)

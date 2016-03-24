@@ -81,7 +81,8 @@ data AisMessage = ClassAPositionReport
                   , latitude :: Latitude
                   , courseOverGround :: Word16
                   , trueHeading :: Word16
-                  , timeStamp :: Word8
+                  , timeStamp :: Maybe Word8
+                  , positionFixingStatus :: PositionFixingStatus
                   , manueverIndicator :: Word8
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
@@ -199,6 +200,16 @@ getMessageType = fmap (toEnum . subtract 1 . fromIntegral) $ getAsWord8 6
 getNavigationalStatus :: BitGet NavigationalStatus
 getNavigationalStatus = fmap (toEnum . fromIntegral) $ getAsWord8 4
 
+getTimeStamp :: BitGet (Maybe Word8, PositionFixingStatus)
+getTimeStamp = do
+                 n <- getAsWord8 6
+                 return $ case n of
+                            60 -> (Nothing, PosStatusNormal)
+                            61 -> (Nothing, PosStatusManual)
+                            62 -> (Nothing, PosStatusEstimated)
+                            63 -> (Nothing, PosStatusInoperative)
+                            _  -> (Just n,  PosStatusNormal)
+
 getMMSI :: BitGet MMSI
 getMMSI = fmap MMSI $ getAsWord32 30
 
@@ -292,7 +303,7 @@ getClassAPositionReport messageType getCommState = do
                             latitude <- getLatitude
                             courseOverGround <- getAsWord16 12
                             trueHeading <- getAsWord16 9
-                            timeStamp <- getAsWord8 6
+                            (timeStamp, positionFixingStatus) <- getTimeStamp
                             manueverIndicator <- getAsWord8 2
                             skip 3
                             raimFlag <- getBit
