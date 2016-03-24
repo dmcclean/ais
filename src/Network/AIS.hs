@@ -5,7 +5,7 @@
 module Network.AIS
 (
   AisMessage
-, getClassAPositionReport
+, getMessage
 , example
 )
 where
@@ -14,7 +14,6 @@ import Control.Monad
 import Data.Bits
 import Data.Binary.Strict.BitGet
 import Data.ByteString as BS
-import qualified Data.ExactPi.TypeLevel as E
 import Data.Int
 import Data.Text as T
 import Data.Time
@@ -159,6 +158,24 @@ data AisMessage = ClassAPositionReport
                   , destination :: Text
                   , dteNotReady :: Bool
                   }
+                | StaticDataReportPartA
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , partNumber :: Word8
+                  , name :: Text
+                  }
+                | StaticDataReportPartB
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , partNumber :: Word8
+                  , typeOfShipAndCargo :: Word8
+                  , vendorID :: Text
+                  , callSign :: Text
+                  , vesselDimensions :: VesselDimensions
+                  , positionFixingDevice :: PositionFixingDevice
+                  }
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -229,6 +246,7 @@ getMessage = do
                  MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
                  MTimeInquiry -> getTimeInquiry
                  MTimeResponse -> getTimeResponse
+                 MStaticDataReport -> getStaticDataReport
                  _ -> undefined 
 
 getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
@@ -343,6 +361,25 @@ getClassAStaticData = do
                         dteNotReady <- getBit
                         skip 1
                         return $ ClassAStaticData { .. }
+
+getStaticDataReport :: BitGet AisMessage
+getStaticDataReport = do
+                        let messageType = MStaticDataReport
+                        repeatIndicator <- getAsWord8 2
+                        userID <- getMMSI
+                        partNumber <- getAsWord8 2
+                        case partNumber of
+                          0 -> do
+                                 name <- getSixBitText 20
+                                 return $ StaticDataReportPartA { .. }
+                          1 -> do
+                                 typeOfShipAndCargo <- getAsWord8 8
+                                 vendorID <- getSixBitText 7
+                                 callSign <- getSixBitText 7
+                                 vesselDimensions <- getVesselDimensions
+                                 positionFixingDevice <- getPositionFixingDevice
+                                 skip 2
+                                 return $ StaticDataReportPartB { .. }
 
 makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> UTCTime
 makeUtcTime y mo d h m s = UTCTime { .. }
