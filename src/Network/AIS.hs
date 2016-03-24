@@ -51,32 +51,21 @@ getLongitude = do
                  return $ changeRep $ (coerce raw :: Longitude')
 
 getAsInt8 :: Int -> BitGet Int8
-getAsInt8 n = do
-                x <- getAsWord8 n
-                let y = x `shiftL` (8 - n)
-                let y' = fromIntegral y `shiftR` (8 - n)
-                return y'
+getAsInt8 n = fmap (signExtendRightAlignedWord n) (getAsWord8 n)
 
 getAsInt16 :: Int -> BitGet Int16
-getAsInt16 n = do
-                 x <- getAsWord16 n
-                 let y = x `shiftL` (16 - n)
-                 let y' = fromIntegral y `shiftR` (16 - n)
-                 return y'
+getAsInt16 n = fmap (signExtendRightAlignedWord n) (getAsWord16 n)
 
 getAsInt32 :: Int -> BitGet Int32
-getAsInt32 n = do
-                 x <- getAsWord32 n
-                 let y = x `shiftL` (32 - n)
-                 let y' = fromIntegral y `shiftR` (32 - n)
-                 return y'
+getAsInt32 n = fmap (signExtendRightAlignedWord n) (getAsWord32 n)
 
 getAsInt64 :: Int -> BitGet Int64
-getAsInt64 n = do
-                 x <- getAsWord64 n
-                 let y = x `shiftL` (64 - n)
-                 let y' = fromIntegral y `shiftR` (64 - n)
-                 return y'  
+getAsInt64 n = fmap (signExtendRightAlignedWord n) (getAsWord64 n)
+
+signExtendRightAlignedWord :: (FiniteBits a, FiniteBits b, Integral a, Integral b) => Int -> a -> b
+signExtendRightAlignedWord n x = fromIntegral (x `shiftL` shift) `shiftR` shift
+  where
+    shift = finiteBitSize x - n
 
 data AisMessage = ClassAPositionReport
                   { messageType :: MessageID
