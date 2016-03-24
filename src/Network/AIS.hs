@@ -315,7 +315,7 @@ getMessage = do
         {- 22 -} MChannelManagement -> undefined
         {- 23 -} MGroupAssignmentCommand -> undefined
         {- 24 -} MStaticDataReport -> getStaticDataReport
-        {- 25 -} MSingleSlotBinaryMessage -> undefined
+        {- 25 -} MSingleSlotBinaryMessage -> getSingleSlotBinaryMessage
         {- 26 -} MMultipleSlotBinaryMessage -> undefined
         {- 27 -} MLongRangePositionReport -> undefined
 
@@ -561,6 +561,25 @@ getAidToNavigationReport = do
                              skip s
                              let name = T.concat [initialName, extendedName]
                              return $ AidToNavigationReport { .. }
+
+getSingleSlotBinaryMessage :: BitGet AisMessage
+getSingleSlotBinaryMessage = do
+                               let messageType = MSingleSlotBinaryMessage
+                               repeatIndicator <- getAsWord8 2
+                               sourceID <- getMMSI
+                               isAddressed <- getBit
+                               hasApplicationID <- getBit
+                               addressee <- if isAddressed
+                                              then fmap Addressed getMMSI <* skip 2
+                                              else return Broadcast
+                               applicationIdentifier <- if hasApplicationID
+                                                          then fmap Just getApplicationIdentifier
+                                                          else return Nothing
+                               n <- remaining
+                               payload <- getLeftByteString n
+                               let retransmitFlag = False
+                               let sequenceNumber = Nothing
+                               return $ BinaryMessage { .. }
 
 makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> UTCTime
 makeUtcTime y mo d h m s = UTCTime { .. }
