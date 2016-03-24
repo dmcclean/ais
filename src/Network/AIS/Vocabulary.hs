@@ -160,7 +160,7 @@ data ApplicationIdentifier = ApplicationIdentifier { designatedAreaCode :: Word1
   deriving (Eq, Show)
 
 data Acknowledgement = Acknowledgement { destinationID :: MMSI
-                                       , sequenceNumber :: Word8
+                                       , acknowledgedSequenceNumber :: Word8
                                        }
   deriving (Eq, Show)
 
@@ -168,6 +168,10 @@ data Interrogation = Interrogation { interrogatedID :: MMSI
                                    , requestedMessageType :: MessageID
                                    , requestedSlotOffset :: Word16
                                    }
+  deriving (Eq, Show)
+
+data Addressee = Broadcast
+               | Addressed MMSI
   deriving (Eq, Show)
 
 type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)

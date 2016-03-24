@@ -87,36 +87,23 @@ data AisMessage = ClassAPositionReport
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
                   }
-                | AddressedSafetyRelatedMessage
+                | SafetyRelatedMessage
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
                   , sourceID :: MMSI
-                  , sequenceNumber :: Word8
-                  , destinationID :: MMSI
+                  , sequenceNumber :: Maybe Word8
+                  , addressee :: Addressee
                   , retransmitFlag :: Bool
                   , safetyRelatedText :: Text                                     
                   }
-                | SafetyRelatedBroadcastMessage
+                | BinaryMessage
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
                   , sourceID :: MMSI
-                  , safetyRelatedText :: Text
-                  }
-                | AddressedBinaryMessage
-                  { messageType :: MessageID
-                  , repeatIndicator :: Word8
-                  , sourceID :: MMSI
-                  , sequenceNumber :: Word8
-                  , destinationID :: MMSI
+                  , sequenceNumber :: Maybe Word8
+                  , addressee :: Addressee
                   , retransmitFlag :: Bool
-                  , applicationIdentifier :: ApplicationIdentifier
-                  , payload :: ByteString
-                  }
-                | BinaryBroadcastMessage
-                  { messageType :: MessageID
-                  , repeatIndicator :: Word8
-                  , sourceID :: MMSI
-                  , applicationIdentifier :: ApplicationIdentifier
+                  , applicationIdentifier :: Maybe ApplicationIdentifier
                   , payload :: ByteString
                   }
                 | AcknowledgementMessage
@@ -253,7 +240,7 @@ getApplicationIdentifier = do
 getAcknowledgement :: BitGet Acknowledgement
 getAcknowledgement = do
                        destinationID <- getMMSI
-                       sequenceNumber <- getAsWord8 2
+                       acknowledgedSequenceNumber <- getAsWord8 2
                        return $ Acknowledgement { .. }
 
 getVesselDimensions :: BitGet VesselDimensions
@@ -356,12 +343,12 @@ getAddressedSafetyRelatedMessage = do
                                      let messageType = MAddressedSafetyRelatedMessage
                                      repeatIndicator <- getAsWord8 2
                                      sourceID <- getMMSI
-                                     sequenceNumber <- getAsWord8 2
-                                     destinationID <- getMMSI
+                                     sequenceNumber <- fmap Just $ getAsWord8 2
+                                     addressee <- fmap Addressed getMMSI
                                      retransmitFlag <- getBit
                                      skip 1
                                      safetyRelatedText <- getRemainingSixBitText
-                                     return $ AddressedSafetyRelatedMessage { .. }
+                                     return $ SafetyRelatedMessage { .. }
 
 getSafetyRelatedBroadcastMessage :: BitGet AisMessage
 getSafetyRelatedBroadcastMessage = do
@@ -370,22 +357,25 @@ getSafetyRelatedBroadcastMessage = do
                                      sourceID <- getMMSI
                                      skip 2
                                      safetyRelatedText <- getRemainingSixBitText
-                                     return $ SafetyRelatedBroadcastMessage { .. }
+                                     let addressee = Broadcast
+                                     let retransmitFlag = False
+                                     let sequenceNumber = Nothing
+                                     return $ SafetyRelatedMessage { .. }
 
 getAddressedBinaryMessage :: BitGet AisMessage
 getAddressedBinaryMessage = do
                               let messageType = MBinaryAddressedMessage
                               repeatIndicator <- getAsWord8 2
                               sourceID <- getMMSI
-                              sequenceNumber <- getAsWord8 2
-                              destinationID <- getMMSI
+                              sequenceNumber <- fmap Just $ getAsWord8 2
+                              addressee <- fmap Addressed getMMSI
                               retransmitFlag <- getBit
                               skip 1
-                              applicationIdentifier <- getApplicationIdentifier
+                              applicationIdentifier <- fmap Just getApplicationIdentifier
                               n <- remaining
                               payload <- getLeftByteString n
                               if (n `mod` 8 == 0)
-                                then return $ AddressedBinaryMessage { .. }
+                                then return $ BinaryMessage { .. }
                                 else error "Length of payload was not an even number of bytes."
 
 getBinaryBroadcastMessage :: BitGet AisMessage
@@ -394,11 +384,14 @@ getBinaryBroadcastMessage = do
                               repeatIndicator <- getAsWord8 2
                               sourceID <- getMMSI
                               skip 2
-                              applicationIdentifier <- getApplicationIdentifier
+                              applicationIdentifier <- fmap Just getApplicationIdentifier
                               n <- remaining
                               payload <- getLeftByteString n
+                              let addressee = Broadcast
+                              let retransmitFlag = False
+                              let sequenceNumber = Nothing
                               if (n `mod` 8 == 0)
-                                then return $ BinaryBroadcastMessage { .. }
+                                then return $ BinaryMessage { .. }
                                 else error "Length of payload was not an even number of bytes."
 
 getBaseStationReportMessage :: BitGet AisMessage
