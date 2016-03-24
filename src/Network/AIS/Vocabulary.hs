@@ -46,13 +46,13 @@ data MessageID = MScheduledClassAPositionReport
                | MSingleSlotBinaryMessage
                | MMultipleSlotBinaryMessage
                | MLongRangePositionReport
-  deriving (Eq, Ord, Enum, Show, Read)
+  deriving (Eq, Enum, Show, Read)
 
 data SyncState = SyncUtcDirect
                | SyncUtcIndirect
                | SyncBaseStation
                | SyncPeer
-  deriving (Eq, Ord, Enum, Show, Read)
+  deriving (Eq, Enum, Show, Read)
 
 data NavigationalStatus = NavUnderWayEngine
                         | NavAtAnchor
@@ -70,7 +70,7 @@ data NavigationalStatus = NavUnderWayEngine
                         | NavReserved
                         | NavAisSartMobEpirb
                         | NavUndefined
-  deriving (Eq, Ord, Enum, Show, Read)
+  deriving (Eq, Enum, Show, Read)
 
 data CommunicationsState = SOTDMA { syncState :: SyncState
                                   , slotTimeout :: Word8
@@ -79,13 +79,13 @@ data CommunicationsState = SOTDMA { syncState :: SyncState
                                  , slotIncrement :: Word16
                                  , numberOfSlots :: Word8
                                  , keep :: Bool }
-  deriving (Eq, Ord, Show, Read)
+  deriving (Eq, Show, Read)
 
 data SOTDMASubmessage = ReceivedStations Word16
                       | SlotNumber Word16
                       | UTCHourAndMinute Word8 Word8
                       | SlotOffset Word16
-  deriving (Eq, Ord, Show, Read)
+  deriving (Eq, Show, Read)
 
 data PositionFixingDevice = PosFixUndefined
                           | PosFixGps
@@ -97,7 +97,11 @@ data PositionFixingDevice = PosFixUndefined
                           | PosFixSurveyed
                           | PosFixGalileo
                           | PosFixInternalGnss
-  deriving (Eq, Ord, Enum, Show, Read)
+  deriving (Eq, Enum, Show, Read)
+
+data AltitudeSensor = AltGnss
+                    | AltBarometric
+  deriving (Eq, Enum, Show, Read)
 
 data ApplicationIdentifier = ApplicationIdentifier { designatedAreaCode :: Word16
                                                    , functionIdentifier :: Word8

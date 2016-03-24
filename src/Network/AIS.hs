@@ -120,6 +120,13 @@ data AisMessage = ClassAPositionReport
                   , applicationIdentifier :: ApplicationIdentifier
                   , payload :: ByteString
                   }
+                | BinaryBroadcastMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , applicationIdentifier :: ApplicationIdentifier
+                  , payload :: ByteString
+                  }
                 | AcknowledgementMessage
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
@@ -277,6 +284,7 @@ getMessage = do
                  MTimeResponse -> getTimeResponse
                  MStaticDataReport -> getStaticDataReport
                  MBinaryAddressedMessage -> getAddressedBinaryMessage
+                 MBinaryBroadcastMessage -> getBinaryBroadcastMessage
                  MBinaryAcknowledgement -> getAcknowledgementMessage MBinaryAcknowledgement
                  MSafetyRelatedAcknowledgement -> getAcknowledgementMessage MSafetyRelatedAcknowledgement
                  _ -> undefined 
@@ -335,7 +343,20 @@ getAddressedBinaryMessage = do
                               payload <- getLeftByteString n
                               if (n `mod` 8 == 0)
                                 then return $ AddressedBinaryMessage { .. }
-                                else error "Length of payload was not an even number of bytes."                              
+                                else error "Length of payload was not an even number of bytes."
+
+getBinaryBroadcastMessage :: BitGet AisMessage
+getBinaryBroadcastMessage = do
+                              let messageType = MBinaryBroadcastMessage
+                              repeatIndicator <- getAsWord8 2
+                              sourceID <- getMMSI
+                              skip 2
+                              applicationIdentifier <- getApplicationIdentifier
+                              n <- remaining
+                              payload <- getLeftByteString n
+                              if (n `mod` 8 == 0)
+                                then return $ BinaryBroadcastMessage { .. }
+                                else error "Length of payload was not an even number of bytes."
 
 getBaseStationReportMessage :: BitGet AisMessage
 getBaseStationReportMessage = do
