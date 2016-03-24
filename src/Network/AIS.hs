@@ -62,10 +62,12 @@ getAsInt32 n = fmap (signExtendRightAlignedWord n) (getAsWord32 n)
 getAsInt64 :: Int -> BitGet Int64
 getAsInt64 n = fmap (signExtendRightAlignedWord n) (getAsWord64 n)
 
+-- Assumes but does not verify that a and b have the same finite size.
 signExtendRightAlignedWord :: (FiniteBits a, FiniteBits b, Integral a, Integral b) => Int -> a -> b
 signExtendRightAlignedWord n x = fromIntegral (x `shiftL` shift) `shiftR` shift
   where
     shift = finiteBitSize x - n
+{-# INLINE signExtendRightAlignedWord #-}    
 
 data AisMessage = ClassAPositionReport
                   { messageType :: MessageID
