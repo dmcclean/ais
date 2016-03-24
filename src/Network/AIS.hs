@@ -64,9 +64,9 @@ getAsInt64 n = fmap (signExtendRightAlignedWord n) (getAsWord64 n)
 
 -- Assumes but does not verify that a and b have the same finite size.
 signExtendRightAlignedWord :: (FiniteBits a, FiniteBits b, Integral a, Integral b) => Int -> a -> b
-signExtendRightAlignedWord n x = fromIntegral (x `shiftL` shift) `shiftR` shift
+signExtendRightAlignedWord n x = fromIntegral (x `shiftL` s) `shiftR` s
   where
-    shift = finiteBitSize x - n
+    s = finiteBitSize x - n
 {-# INLINE signExtendRightAlignedWord #-}    
 
 data AisMessage = ClassAPositionReport
@@ -191,6 +191,25 @@ data AisMessage = ClassAPositionReport
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   }
+                | AidToNavigationReport
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , aidID :: MMSI
+                  , typeOfAid :: AidToNavigation
+                  , name :: Text
+                  , positionAccuracy :: Bool
+                  , longitude :: Longitude
+                  , latitude :: Latitude
+                  , aidDimensions :: VesselDimensions
+                  , positionFixingDevice :: PositionFixingDevice
+                  , timeStamp :: Maybe Word8
+                  , positionFixingStatus :: PositionFixingStatus
+                  , offPosition :: Bool
+                  , aidStatus :: Word8
+                  , raimFlag :: Bool
+                  , virtualFlag :: Bool
+                  , assignedModeFlag :: Bool
+                  }
 
   deriving (Eq, Show)
 
@@ -215,6 +234,9 @@ getMMSI = fmap MMSI $ getAsWord32 30
 
 getSyncState :: BitGet SyncState
 getSyncState = fmap (toEnum . fromIntegral) $ getAsWord8 2
+
+getAidToNavigation :: BitGet AidToNavigation
+getAidToNavigation = fmap (toEnum . fromIntegral) $ getAsWord8 5
 
 getApplicationIdentifier :: BitGet ApplicationIdentifier
 getApplicationIdentifier = do
@@ -275,21 +297,33 @@ getMessage :: BitGet AisMessage
 getMessage = do
                messageType <- getMessageType
                case messageType of
-                 MScheduledClassAPositionReport -> getClassAPositionReport MScheduledClassAPositionReport getSOTDMACommunicationsState
-                 MAssignedScheduledClassAPositionReport -> getClassAPositionReport MAssignedScheduledClassAPositionReport getSOTDMACommunicationsState
-                 MSpecialClassAPositionReport -> getClassAPositionReport MSpecialClassAPositionReport getITDMACommunicationsState
-                 MBaseStationReport -> getBaseStationReportMessage
-                 MStaticAndVoyageData -> getClassAStaticData
-                 MAddressedSafetyRelatedMessage -> getAddressedSafetyRelatedMessage
-                 MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
-                 MTimeInquiry -> getTimeInquiry
-                 MTimeResponse -> getTimeResponse
-                 MStaticDataReport -> getStaticDataReport
-                 MBinaryAddressedMessage -> getAddressedBinaryMessage
-                 MBinaryBroadcastMessage -> getBinaryBroadcastMessage
-                 MBinaryAcknowledgement -> getAcknowledgementMessage MBinaryAcknowledgement
-                 MSafetyRelatedAcknowledgement -> getAcknowledgementMessage MSafetyRelatedAcknowledgement
-                 _ -> undefined 
+                 {-  1 -} MScheduledClassAPositionReport -> getClassAPositionReport MScheduledClassAPositionReport getSOTDMACommunicationsState
+                 {-  2 -} MAssignedScheduledClassAPositionReport -> getClassAPositionReport MAssignedScheduledClassAPositionReport getSOTDMACommunicationsState
+                 {-  3 -} MSpecialClassAPositionReport -> getClassAPositionReport MSpecialClassAPositionReport getITDMACommunicationsState
+                 {-  4 -} MBaseStationReport -> getBaseStationReportMessage
+                 {-  5 -} MStaticAndVoyageData -> getClassAStaticData
+                 {-  6 -} MBinaryAddressedMessage -> getAddressedBinaryMessage
+                 {-  7 -} MBinaryAcknowledgement -> getAcknowledgementMessage MBinaryAcknowledgement
+                 {-  8 -} MBinaryBroadcastMessage -> getBinaryBroadcastMessage
+                 {-  9 -} MStandardSarAircraftPositionReport -> undefined
+                 {- 10 -} MTimeInquiry -> getTimeInquiry
+                 {- 11 -} MTimeResponse -> getTimeResponse
+                 {- 12 -} MAddressedSafetyRelatedMessage -> getAddressedSafetyRelatedMessage
+                 {- 13 -} MSafetyRelatedAcknowledgement -> getAcknowledgementMessage MSafetyRelatedAcknowledgement
+                 {- 14 -} MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
+                 {- 15 -} MInterrogation -> undefined
+                 {- 16 -} MAssignmentModeCommand -> undefined
+                 {- 17 -} MDgnssBroadcastBinaryMessage -> undefined
+                 {- 18 -} MStandardClassBPositionReport -> undefined
+                 {- 19 -} MExtendedClassBPositionReport -> undefined
+                 {- 20 -} MDataLinkManagementMessage -> undefined
+                 {- 21 -} MAidToNavigationReport -> getAidToNavigationReport
+                 {- 22 -} MChannelManagement -> undefined
+                 {- 23 -} MGroupAssignmentCommand -> undefined
+                 {- 24 -} MStaticDataReport -> getStaticDataReport
+                 {- 25 -} MSingleSlotBinaryMessage -> undefined
+                 {- 26 -} MMultipleSlotBinaryMessage -> undefined
+                 {- 27 -} MLongRangePositionReport -> undefined
 
 getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
 getClassAPositionReport messageType getCommState = do
@@ -463,6 +497,31 @@ getAcknowledgementMessage messageType = do
                                                    acknowledgements <- replicateM (n `div` 32) getAcknowledgement
                                                    return $ AcknowledgementMessage { .. }
                                             else error "Acknowledgement message contained partial acknowledgements of incorrect length."
+
+getAidToNavigationReport :: BitGet AisMessage
+getAidToNavigationReport = do
+                             let messageType = MAidToNavigationReport
+                             repeatIndicator <- getAsWord8 2
+                             aidID <- getMMSI
+                             typeOfAid <- getAidToNavigation
+                             initialName <- getSixBitText 20
+                             positionAccuracy <- getBit
+                             longitude <- getLongitude
+                             latitude <- getLatitude
+                             aidDimensions <- getVesselDimensions
+                             positionFixingDevice <- getPositionFixingDevice
+                             (timeStamp, positionFixingStatus) <- getTimeStamp
+                             offPosition <- getBit
+                             aidStatus <- getAsWord8 8
+                             raimFlag <- getBit
+                             virtualFlag <- getBit
+                             assignedModeFlag <- getBit
+                             skip 1
+                             (n, s) <- fmap (`divMod` 6) remaining
+                             extendedName <- getSixBitText n
+                             skip s
+                             let name = T.concat [initialName, extendedName]
+                             return $ AidToNavigationReport { .. }
 
 makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> UTCTime
 makeUtcTime y mo d h m s = UTCTime { .. }

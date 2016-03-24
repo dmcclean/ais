@@ -27,7 +27,7 @@ data MessageID = MScheduledClassAPositionReport
                | MBinaryAddressedMessage
                | MBinaryAcknowledgement
                | MBinaryBroadcastMessage
-               | MStandardSARAircraftPositionReport
+               | MStandardSarAircraftPositionReport
                | MTimeInquiry
                | MTimeResponse
                | MAddressedSafetyRelatedMessage
@@ -35,11 +35,11 @@ data MessageID = MScheduledClassAPositionReport
                | MSafetyRelatedBroadcastMessage
                | MInterrogation
                | MAssignmentModeCommand
-               | MDGNSSBroadcastBinaryMessage
+               | MDgnssBroadcastBinaryMessage
                | MStandardClassBPositionReport
                | MExtendedClassBPositionReport
                | MDataLinkManagementMessage
-               | MAidsToNavigationReport
+               | MAidToNavigationReport
                | MChannelManagement
                | MGroupAssignmentCommand
                | MStaticDataReport

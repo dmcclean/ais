@@ -15,38 +15,44 @@ import Data.Char
 import Data.Text as T
 import Data.Binary.BitPut
 
-parseAis :: Text -> ByteString
+parseAis :: Text -> (ByteString, Int)
 parseAis input = let (Right output) = parseAisMessagePackedInNmeaMessage input
                   in output
 
-parseAisMessagePackedInNmeaMessage :: Text -> Either String ByteString
+parseAisMessagePackedInNmeaMessage :: Text -> Either String (ByteString, Int)
 parseAisMessagePackedInNmeaMessage = parseOnly (aisMessage <* endOfInput)
 
-aisMessage :: Parser ByteString
+aisMessage :: Parser (ByteString, Int)
 aisMessage = do
-               char '!'
-               string "AIVDM"
-               char ','
+               _ <- char '!'
+               _ <- string "AIVDM"
+               _ <- char ','
                fragments <- decimal
-               char ','
+               _ <- char ','
                fragmentNumber <- decimal
-               char ','
+               _ <- char ','
                messageID <- option 0 decimal
-               char ','
+               _ <- char ','
                channelCode <- anyChar
-               char ','
+               _ <- char ','
                payload <- many' $ satisfy (inClass "0-9A-Wa-w:;<=>?@`")
-               char ','
+               _ <- char ','
                fillBits <- decimal
-               char '*'
-               anyChar
-               anyChar
-               return $ translate payload fillBits
+               _ <- char '*'
+               _ <- anyChar
+               _ <- anyChar
+               let result = translate payload fillBits
+               let valid = (((6 * Prelude.length payload) - fillBits) - (8 * (Data.ByteString.length result - 1))) `mod` 8
+
+               return (result, valid)
 
 translate :: [Char] -> Int -> ByteString
-translate cs fill = toStrict $ runBitPut $ mapM (putNBits 6) (fmap translateChar cs) >> putNBits fill zero
+translate cs n = toStrict $ runBitPut $ putThem cs
   where
-    zero = 0 :: Int
+    putThem [] = putNBits 0 (0 :: Int)
+    putThem (x:[]) = putNBits (6 - n) (translateChar x)
+    putThem (x:xs) = putNBits 6 (translateChar x) >> putThem xs
+
 
 translateChar :: Char -> Int
 translateChar c | c' > 88 = fromIntegral (c' - 56)
