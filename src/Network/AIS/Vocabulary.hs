@@ -19,7 +19,8 @@ instance Show MMSI where
 
 type RepeatIndicator = Word8
 
-data MessageID = MScheduledClassAPositionReport
+data MessageID = MNone
+               | MScheduledClassAPositionReport
                | MAssignedScheduledClassAPositionReport
                | MSpecialClassAPositionReport
                | MBaseStationReport
@@ -161,6 +162,12 @@ data ApplicationIdentifier = ApplicationIdentifier { designatedAreaCode :: Word1
 data Acknowledgement = Acknowledgement { destinationID :: MMSI
                                        , sequenceNumber :: Word8
                                        }
+  deriving (Eq, Show)
+
+data Interrogation = Interrogation { interrogatedID :: MMSI
+                                   , requestedMessageType :: MessageID
+                                   , requestedSlotOffset :: Word16
+                                   }
   deriving (Eq, Show)
 
 type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)

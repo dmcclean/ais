@@ -210,11 +210,17 @@ data AisMessage = ClassAPositionReport
                   , virtualFlag :: Bool
                   , assignedModeFlag :: Bool
                   }
+                | InterrogationMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , interrogations :: [Interrogation]
+                  }
 
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
-getMessageType = fmap (toEnum . subtract 1 . fromIntegral) $ getAsWord8 6
+getMessageType = fmap (toEnum . fromIntegral) $ getAsWord8 6
 
 getNavigationalStatus :: BitGet NavigationalStatus
 getNavigationalStatus = fmap (toEnum . fromIntegral) $ getAsWord8 4
@@ -297,6 +303,7 @@ getMessage :: BitGet AisMessage
 getMessage = do
                messageType <- getMessageType
                case messageType of
+                 MNone -> undefined
         {-  1 -} MScheduledClassAPositionReport -> getClassAPositionReport MScheduledClassAPositionReport getSOTDMACommunicationsState
         {-  2 -} MAssignedScheduledClassAPositionReport -> getClassAPositionReport MAssignedScheduledClassAPositionReport getSOTDMACommunicationsState
         {-  3 -} MSpecialClassAPositionReport -> getClassAPositionReport MSpecialClassAPositionReport getITDMACommunicationsState
@@ -311,7 +318,7 @@ getMessage = do
         {- 12 -} MAddressedSafetyRelatedMessage -> getAddressedSafetyRelatedMessage
         {- 13 -} MSafetyRelatedAcknowledgement -> getAcknowledgementMessage MSafetyRelatedAcknowledgement
         {- 14 -} MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
-        {- 15 -} MInterrogation -> undefined
+        {- 15 -} MInterrogation -> getInterrogationMessage
         {- 16 -} MAssignmentModeCommand -> undefined
         {- 17 -} MDgnssBroadcastBinaryMessage -> undefined
         {- 18 -} MStandardClassBPositionReport -> undefined
@@ -415,6 +422,45 @@ getBaseStationReportMessage = do
                                 communicationsState <- getSOTDMACommunicationsState
                                 let utcTime = makeUtcTime year month day hour minute second
                                 return $ BaseStationReport { .. }
+
+getInterrogationMessage :: BitGet AisMessage
+getInterrogationMessage = do
+                            let messageType = MInterrogation
+                            repeatIndicator <- getAsWord8 2
+                            sourceID <- getMMSI
+                            skip 2
+                            interrogations <- getInterrogations
+                            return $ InterrogationMessage { .. }
+  where
+    getInterrogations :: BitGet [Interrogation]
+    getInterrogations = do
+                          interrogatedID <- getMMSI
+                          requestedMessageType <- getMessageType
+                          requestedSlotOffset <- getAsWord16 12
+                          getInterrogationsAfterFirst $ Interrogation { .. }
+    getInterrogationsAfterFirst :: Interrogation -> BitGet [Interrogation]
+    getInterrogationsAfterFirst x = do
+                                      n <- remaining
+                                      if n >= 20
+                                        then do
+                                          skip 2
+                                          requestedMessageType <- getMessageType
+                                          requestedSlotOffset <- getAsWord16 12
+                                          if (requestedMessageType == MNone && requestedSlotOffset == 0)
+                                            then getInterrogationsAfterSecond [x]
+                                            else getInterrogationsAfterSecond [x, Interrogation { interrogatedID = interrogatedID x, requestedMessageType = requestedMessageType, requestedSlotOffset = requestedSlotOffset } ]
+                                        else return [x]
+    getInterrogationsAfterSecond xs = do
+                                        n <- remaining
+                                        if n >= 52
+                                          then do
+                                            skip 2
+                                            interrogatedID <- getMMSI
+                                            requestedMessageType <- getMessageType
+                                            requestedSlotOffset <- getAsWord16 12
+                                            skip 2
+                                            return $ xs ++ [Interrogation { .. }]
+                                          else return xs
 
 getTimeInquiry :: BitGet AisMessage
 getTimeInquiry = do
