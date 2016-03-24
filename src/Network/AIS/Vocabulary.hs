@@ -99,6 +99,16 @@ data PositionFixingDevice = PosFixUndefined
                           | PosFixInternalGnss
   deriving (Eq, Ord, Enum, Show, Read)
 
+data ApplicationIdentifier = ApplicationIdentifier { designatedAreaCode :: Word16
+                                                   , functionIdentifier :: Word8
+                                                   }
+  deriving (Eq, Show)
+
+data Acknowledgement = Acknowledgement { destinationID :: MMSI
+                                       , sequenceNumber :: Word8
+                                       }
+  deriving (Eq, Show)
+
 type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
 type Latitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 type Longitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32

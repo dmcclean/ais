@@ -110,6 +110,22 @@ data AisMessage = ClassAPositionReport
                   , sourceID :: MMSI
                   , safetyRelatedText :: Text
                   }
+                | AddressedBinaryMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , sequenceNumber :: Word8
+                  , destinationID :: MMSI
+                  , retransmitFlag :: Bool
+                  , applicationIdentifier :: ApplicationIdentifier
+                  , payload :: ByteString
+                  }
+                | AcknowledgementMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , acknowledgements :: [Acknowledgement]
+                  }
                 | BaseStationReport
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
@@ -176,6 +192,7 @@ data AisMessage = ClassAPositionReport
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   }
+
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -189,6 +206,18 @@ getMMSI = fmap MMSI $ getAsWord32 30
 
 getSyncState :: BitGet SyncState
 getSyncState = fmap (toEnum . fromIntegral) $ getAsWord8 2
+
+getApplicationIdentifier :: BitGet ApplicationIdentifier
+getApplicationIdentifier = do
+                             designatedAreaCode <- getAsWord16 10
+                             functionIdentifier <- getAsWord8 6
+                             return $ ApplicationIdentifier { .. }
+
+getAcknowledgement :: BitGet Acknowledgement
+getAcknowledgement = do
+                       destinationID <- getMMSI
+                       sequenceNumber <- getAsWord8 2
+                       return $ Acknowledgement { .. }
 
 getVesselDimensions :: BitGet VesselDimensions
 getVesselDimensions = do
@@ -247,6 +276,9 @@ getMessage = do
                  MTimeInquiry -> getTimeInquiry
                  MTimeResponse -> getTimeResponse
                  MStaticDataReport -> getStaticDataReport
+                 MBinaryAddressedMessage -> getAddressedBinaryMessage
+                 MBinaryAcknowledgement -> getAcknowledgementMessage MBinaryAcknowledgement
+                 MSafetyRelatedAcknowledgement -> getAcknowledgementMessage MSafetyRelatedAcknowledgement
                  _ -> undefined 
 
 getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
@@ -288,6 +320,22 @@ getSafetyRelatedBroadcastMessage = do
                                      skip 2
                                      safetyRelatedText <- getRemainingSixBitText
                                      return $ SafetyRelatedBroadcastMessage { .. }
+
+getAddressedBinaryMessage :: BitGet AisMessage
+getAddressedBinaryMessage = do
+                              let messageType = MBinaryAddressedMessage
+                              repeatIndicator <- getAsWord8 2
+                              sourceID <- getMMSI
+                              sequenceNumber <- getAsWord8 2
+                              destinationID <- getMMSI
+                              retransmitFlag <- getBit
+                              skip 1
+                              applicationIdentifier <- getApplicationIdentifier
+                              n <- remaining
+                              payload <- getLeftByteString n
+                              if (n `mod` 8 == 0)
+                                then return $ AddressedBinaryMessage { .. }
+                                else error "Length of payload was not an even number of bytes."                              
 
 getBaseStationReportMessage :: BitGet AisMessage
 getBaseStationReportMessage = do
@@ -380,6 +428,18 @@ getStaticDataReport = do
                                  positionFixingDevice <- getPositionFixingDevice
                                  skip 2
                                  return $ StaticDataReportPartB { .. }
+
+getAcknowledgementMessage :: MessageID -> BitGet AisMessage
+getAcknowledgementMessage messageType = do
+                                          repeatIndicator <- getAsWord8 2
+                                          sourceID <- getMMSI
+                                          skip 2
+                                          n <- remaining
+                                          if (n `mod` 32 == 0)
+                                            then do
+                                                   acknowledgements <- replicateM (n `div` 32) getAcknowledgement
+                                                   return $ AcknowledgementMessage { .. }
+                                            else error "Acknowledgement message contained partial acknowledgements of incorrect length."
 
 makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> UTCTime
 makeUtcTime y mo d h m s = UTCTime { .. }
