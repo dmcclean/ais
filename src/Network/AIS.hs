@@ -297,33 +297,33 @@ getMessage :: BitGet AisMessage
 getMessage = do
                messageType <- getMessageType
                case messageType of
-                 {-  1 -} MScheduledClassAPositionReport -> getClassAPositionReport MScheduledClassAPositionReport getSOTDMACommunicationsState
-                 {-  2 -} MAssignedScheduledClassAPositionReport -> getClassAPositionReport MAssignedScheduledClassAPositionReport getSOTDMACommunicationsState
-                 {-  3 -} MSpecialClassAPositionReport -> getClassAPositionReport MSpecialClassAPositionReport getITDMACommunicationsState
-                 {-  4 -} MBaseStationReport -> getBaseStationReportMessage
-                 {-  5 -} MStaticAndVoyageData -> getClassAStaticData
-                 {-  6 -} MBinaryAddressedMessage -> getAddressedBinaryMessage
-                 {-  7 -} MBinaryAcknowledgement -> getAcknowledgementMessage MBinaryAcknowledgement
-                 {-  8 -} MBinaryBroadcastMessage -> getBinaryBroadcastMessage
-                 {-  9 -} MStandardSarAircraftPositionReport -> undefined
-                 {- 10 -} MTimeInquiry -> getTimeInquiry
-                 {- 11 -} MTimeResponse -> getTimeResponse
-                 {- 12 -} MAddressedSafetyRelatedMessage -> getAddressedSafetyRelatedMessage
-                 {- 13 -} MSafetyRelatedAcknowledgement -> getAcknowledgementMessage MSafetyRelatedAcknowledgement
-                 {- 14 -} MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
-                 {- 15 -} MInterrogation -> undefined
-                 {- 16 -} MAssignmentModeCommand -> undefined
-                 {- 17 -} MDgnssBroadcastBinaryMessage -> undefined
-                 {- 18 -} MStandardClassBPositionReport -> undefined
-                 {- 19 -} MExtendedClassBPositionReport -> undefined
-                 {- 20 -} MDataLinkManagementMessage -> undefined
-                 {- 21 -} MAidToNavigationReport -> getAidToNavigationReport
-                 {- 22 -} MChannelManagement -> undefined
-                 {- 23 -} MGroupAssignmentCommand -> undefined
-                 {- 24 -} MStaticDataReport -> getStaticDataReport
-                 {- 25 -} MSingleSlotBinaryMessage -> undefined
-                 {- 26 -} MMultipleSlotBinaryMessage -> undefined
-                 {- 27 -} MLongRangePositionReport -> undefined
+        {-  1 -} MScheduledClassAPositionReport -> getClassAPositionReport MScheduledClassAPositionReport getSOTDMACommunicationsState
+        {-  2 -} MAssignedScheduledClassAPositionReport -> getClassAPositionReport MAssignedScheduledClassAPositionReport getSOTDMACommunicationsState
+        {-  3 -} MSpecialClassAPositionReport -> getClassAPositionReport MSpecialClassAPositionReport getITDMACommunicationsState
+        {-  4 -} MBaseStationReport -> getBaseStationReportMessage
+        {-  5 -} MStaticAndVoyageData -> getClassAStaticData
+        {-  6 -} MBinaryAddressedMessage -> getAddressedBinaryMessage
+        {-  7 -} MBinaryAcknowledgement -> getAcknowledgementMessage MBinaryAcknowledgement
+        {-  8 -} MBinaryBroadcastMessage -> getBinaryBroadcastMessage
+        {-  9 -} MStandardSarAircraftPositionReport -> undefined
+        {- 10 -} MTimeInquiry -> getTimeInquiry
+        {- 11 -} MTimeResponse -> getTimeResponse
+        {- 12 -} MAddressedSafetyRelatedMessage -> getAddressedSafetyRelatedMessage
+        {- 13 -} MSafetyRelatedAcknowledgement -> getAcknowledgementMessage MSafetyRelatedAcknowledgement
+        {- 14 -} MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
+        {- 15 -} MInterrogation -> undefined
+        {- 16 -} MAssignmentModeCommand -> undefined
+        {- 17 -} MDgnssBroadcastBinaryMessage -> undefined
+        {- 18 -} MStandardClassBPositionReport -> undefined
+        {- 19 -} MExtendedClassBPositionReport -> undefined
+        {- 20 -} MDataLinkManagementMessage -> undefined
+        {- 21 -} MAidToNavigationReport -> getAidToNavigationReport
+        {- 22 -} MChannelManagement -> undefined
+        {- 23 -} MGroupAssignmentCommand -> undefined
+        {- 24 -} MStaticDataReport -> getStaticDataReport
+        {- 25 -} MSingleSlotBinaryMessage -> undefined
+        {- 26 -} MMultipleSlotBinaryMessage -> undefined
+        {- 27 -} MLongRangePositionReport -> undefined
 
 getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
 getClassAPositionReport messageType getCommState = do
