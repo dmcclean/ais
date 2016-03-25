@@ -105,6 +105,7 @@ data AisMessage = ClassAPositionReport
                   , retransmitFlag :: Bool
                   , applicationIdentifier :: Maybe ApplicationIdentifier
                   , payload :: ByteString
+                  , optionalCommunicationsState :: Maybe CommunicationsState
                   }
                 | AcknowledgementMessage
                   { messageType :: MessageID
@@ -316,7 +317,7 @@ getMessage = do
         {- 23 -} MGroupAssignmentCommand -> undefined
         {- 24 -} MStaticDataReport -> getStaticDataReport
         {- 25 -} MSingleSlotBinaryMessage -> getSingleSlotBinaryMessage
-        {- 26 -} MMultipleSlotBinaryMessage -> undefined
+        {- 26 -} MMultipleSlotBinaryMessage -> getMultipleSlotBinaryMessage
         {- 27 -} MLongRangePositionReport -> undefined
 
 getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
@@ -374,6 +375,7 @@ getAddressedBinaryMessage = do
                               applicationIdentifier <- fmap Just getApplicationIdentifier
                               n <- remaining
                               payload <- getLeftByteString n
+                              let optionalCommunicationsState = Nothing
                               if (n `mod` 8 == 0)
                                 then return $ BinaryMessage { .. }
                                 else error "Length of payload was not an even number of bytes."
@@ -390,6 +392,7 @@ getBinaryBroadcastMessage = do
                               let addressee = Broadcast
                               let retransmitFlag = False
                               let sequenceNumber = Nothing
+                              let optionalCommunicationsState = Nothing
                               if (n `mod` 8 == 0)
                                 then return $ BinaryMessage { .. }
                                 else error "Length of payload was not an even number of bytes."
@@ -579,7 +582,33 @@ getSingleSlotBinaryMessage = do
                                payload <- getLeftByteString n
                                let retransmitFlag = False
                                let sequenceNumber = Nothing
+                               let optionalCommunicationsState = Nothing
                                return $ BinaryMessage { .. }
+
+getMultipleSlotBinaryMessage :: BitGet AisMessage
+getMultipleSlotBinaryMessage = do
+                                 let messageType = MMultipleSlotBinaryMessage
+                                 repeatIndicator <- getAsWord8 2
+                                 sourceID <- getMMSI
+                                 isAddressed <- getBit
+                                 hasApplicationID <- getBit
+                                 addressee <- if isAddressed
+                                                then fmap Addressed getMMSI <* skip 2
+                                                else return Broadcast
+                                 applicationIdentifier <- if hasApplicationID
+                                                          then fmap Just getApplicationIdentifier
+                                                          else return Nothing
+                                 n <- remaining
+                                 payload <- getLeftByteString (n - 24)
+                                 skip 4
+                                 isItdma <- getBit
+                                 communicationsState <- if isItdma
+                                                          then getITDMACommunicationsState
+                                                          else getSOTDMACommunicationsState
+                                 let retransmitFlag = False
+                                 let sequenceNumber = Nothing
+                                 let optionalCommunicationsState = Just communicationsState
+                                 return $ BinaryMessage { .. }
 
 makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> UTCTime
 makeUtcTime y mo d h m s = UTCTime { .. }
