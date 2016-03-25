@@ -15,7 +15,10 @@ newtype MMSI = MMSI Word32
   deriving (Eq, Ord)
 
 instance Show MMSI where
-  show (MMSI n) = printf "MMSI %0.9d" n
+  showsPrec d (MMSI n) = showParen (d > app_prec) showStr
+    where
+      showStr = showString $ printf "MMSI %0.9d" n
+      app_prec = 10 -- precedence of application
 
 type RepeatIndicator = Word8
 
