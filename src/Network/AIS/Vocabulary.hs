@@ -174,6 +174,16 @@ data Addressee = Broadcast
                | Addressed MMSI
   deriving (Eq, Show)
 
+data Reservation = Reservation { reservedOffsetNumber :: Word16
+                               , reservedNumberOfSlots :: Word8
+                               , reservationTimeoutMinutes :: Word8
+                               , reservationIncrement :: Word16
+                               }
+  deriving (Eq, Show)
+
+isValidReservation :: Reservation -> Bool
+isValidReservation r = reservationTimeoutMinutes r > 0 && reservedNumberOfSlots r > 0
+
 type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
 type Latitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 type Longitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32

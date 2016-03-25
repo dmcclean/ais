@@ -204,7 +204,12 @@ data AisMessage = ClassAPositionReport
                   , sourceID :: MMSI
                   , interrogations :: [Interrogation]
                   }
-
+                | DataLinkManagementMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , reservations :: [Reservation]
+                  }
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -212,6 +217,14 @@ getMessageType = fmap (toEnum . fromIntegral) $ getAsWord8 6
 
 getNavigationalStatus :: BitGet NavigationalStatus
 getNavigationalStatus = fmap (toEnum . fromIntegral) $ getAsWord8 4
+
+getReservation :: BitGet Reservation
+getReservation = do
+                   reservedOffsetNumber <- getAsWord16 12
+                   reservedNumberOfSlots <- getAsWord8 4
+                   reservationTimeoutMinutes <- getAsWord8 3
+                   reservationIncrement <- getAsWord16 11
+                   return $ Reservation { .. }
 
 getTimeStamp :: BitGet (Maybe Word8, PositionFixingStatus)
 getTimeStamp = do
@@ -311,7 +324,7 @@ getMessage = do
         {- 17 -} MDgnssBroadcastBinaryMessage -> undefined
         {- 18 -} MStandardClassBPositionReport -> undefined
         {- 19 -} MExtendedClassBPositionReport -> undefined
-        {- 20 -} MDataLinkManagementMessage -> undefined
+        {- 20 -} MDataLinkManagementMessage -> getDataLinkManagementMessage
         {- 21 -} MAidToNavigationReport -> getAidToNavigationReport
         {- 22 -} MChannelManagement -> undefined
         {- 23 -} MGroupAssignmentCommand -> undefined
@@ -418,6 +431,19 @@ getBaseStationReportMessage = do
                                 communicationsState <- getSOTDMACommunicationsState
                                 let utcTime = makeUtcTime year month day hour minute second
                                 return $ BaseStationReport { .. }
+
+getDataLinkManagementMessage :: BitGet AisMessage
+getDataLinkManagementMessage = do
+                                 let messageType = MDataLinkManagementMessage
+                                 repeatIndicator <- getAsWord8 2
+                                 sourceID <- getMMSI
+                                 skip 2
+                                 r <- getReservation
+                                 (n, s) <- fmap (`divMod` 30) remaining
+                                 rs <- replicateM n getReservation
+                                 skip s
+                                 let reservations = Prelude.filter isValidReservation (r:rs)
+                                 return $ DataLinkManagementMessage { .. }
 
 getInterrogationMessage :: BitGet AisMessage
 getInterrogationMessage = do
