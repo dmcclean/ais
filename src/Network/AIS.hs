@@ -35,11 +35,17 @@ getRemainingSixBitText = do
                            bits <- remaining
                            getSixBitText $ bits `div` 6
 
-getLatitude :: BitGet Latitude
-getLatitude = fmap coerce getAsInt32 27
+getLatitude :: BitGet (Maybe Latitude)
+getLatitude = fmap f $ getAsInt32 27
+  where
+    f x | -108000000 <= x && x <= 108000000 = Just $ coerce x
+        | otherwise                         = Nothing
 
-getLongitude :: BitGet Longitude
-getLongitude = fmap coerce $ getAsInt32 28
+getLongitude :: BitGet (Maybe Longitude)
+getLongitude = fmap f $ getAsInt32 28
+  where
+    f x | -54000000 <= x && x <= 54000000 = Just $ coerce x
+        | otherwise                       = Nothing
 
 getSpeed :: BitGet (Speed n Word16)
 getSpeed = do
@@ -76,8 +82,8 @@ data AisMessage = ClassAPositionReport
                   , rateOfTurn :: PackedRateOfTurn
                   , speedOverGround :: VesselSpeed
                   , positionAccuracy :: Bool
-                  , longitude :: Longitude
-                  , latitude :: Latitude
+                  , longitude :: Maybe Longitude
+                  , latitude :: Maybe Latitude
                   , courseOverGround :: Maybe Course
                   , trueHeading :: Maybe Heading
                   , timeStamp :: Maybe Word8
@@ -118,8 +124,8 @@ data AisMessage = ClassAPositionReport
                   , userID :: MMSI
                   , utcTime :: UTCTime
                   , positionAccuracy :: Bool
-                  , longitude :: Longitude
-                  , latitude :: Latitude
+                  , longitude :: Maybe Longitude
+                  , latitude :: Maybe Latitude
                   , positionFixingDevice :: PositionFixingDevice
                   , doNotSuppressLongRangeMessages :: Bool
                   , raimFlag :: Bool
@@ -137,8 +143,8 @@ data AisMessage = ClassAPositionReport
                   , userID :: MMSI
                   , utcTime :: UTCTime
                   , positionAccuracy :: Bool
-                  , longitude :: Longitude
-                  , latitude :: Latitude
+                  , longitude :: Maybe Longitude
+                  , latitude :: Maybe Latitude
                   , positionFixingDevice :: PositionFixingDevice
                   , doNotSuppressLongRangeMessages :: Bool
                   , raimFlag :: Bool
@@ -185,8 +191,8 @@ data AisMessage = ClassAPositionReport
                   , typeOfAid :: AidToNavigation
                   , name :: Text
                   , positionAccuracy :: Bool
-                  , longitude :: Longitude
-                  , latitude :: Latitude
+                  , longitude :: Maybe Longitude
+                  , latitude :: Maybe Latitude
                   , aidDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   , timeStamp :: Maybe Word8
@@ -216,8 +222,8 @@ data AisMessage = ClassAPositionReport
                   , altitude :: Altitude
                   , aircraftSpeedOverGround :: AircraftSpeed
                   , positionAccuracy :: Bool
-                  , longitude :: Longitude
-                  , latitude :: Latitude
+                  , longitude :: Maybe Longitude
+                  , latitude :: Maybe Latitude
                   , courseOverGround :: Maybe Course
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
