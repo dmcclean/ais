@@ -188,8 +188,8 @@ isValidReservation :: Reservation -> Bool
 isValidReservation r = reservationTimeoutMinutes r > 0 && reservedNumberOfSlots r > 0
 
 type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
-type Latitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
-type Longitude' = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
+type Latitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
+type Longitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 
 type VesselSpeed = SQuantity (E.ExactNatural 463 E./ E.ExactNatural 9000) DVelocity Word16
 type AircraftSpeed = SQuantity (E.ExactNatural 463 E./ E.ExactNatural 900) DVelocity Word16

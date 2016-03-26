@@ -19,12 +19,7 @@ import Data.Text as T
 import Data.Time
 import Data.Word
 import Network.AIS.Vocabulary
-import Numeric.Units.Dimensional.FixedPoint (changeRep)
-import Numeric.Units.Dimensional.Quantities
 import Numeric.Units.Dimensional.Coercion
-
-type Latitude = PlaneAngle Double
-type Longitude = PlaneAngle Double
 
 sixBitCharacters :: Text
 sixBitCharacters = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^- !\"#$%&`()*+,-./0123456789:;<=>?"
@@ -41,14 +36,13 @@ getRemainingSixBitText = do
                            getSixBitText $ bits `div` 6
 
 getLatitude :: BitGet Latitude
-getLatitude = do
-                raw <- getAsInt32 27
-                return $ changeRep $ (coerce raw :: Latitude')
+getLatitude = fmap coerce getAsInt32 27
 
 getLongitude :: BitGet Longitude
-getLongitude = do
-                 raw <- getAsInt32 28
-                 return $ changeRep $ (coerce raw :: Longitude')
+getLongitude = fmap coerce $ getAsInt32 28
+
+getVesselSpeed :: BitGet VesselSpeed
+getVesselSpeed = fmap coerce $ getAsWord16 10
 
 getAsInt8 :: Int -> BitGet Int8
 getAsInt8 n = fmap (signExtendRightAlignedWord n) (getAsWord8 n)
@@ -75,7 +69,7 @@ data AisMessage = ClassAPositionReport
                   , userID :: MMSI
                   , navigationalStatus :: NavigationalStatus
                   , rateOfTurn :: Int8
-                  , speedOverGround :: Word16
+                  , speedOverGround :: VesselSpeed
                   , positionAccuracy :: Bool
                   , longitude :: Longitude
                   , latitude :: Latitude
@@ -339,7 +333,7 @@ getClassAPositionReport messageType getCommState = do
                             userID <- getMMSI
                             navigationalStatus <- getNavigationalStatus
                             rateOfTurn <- getAsInt8 8
-                            speedOverGround <- getAsWord16 10
+                            speedOverGround <- getVesselSpeed
                             positionAccuracy <- getBit
                             longitude <- getLongitude
                             latitude <- getLatitude
