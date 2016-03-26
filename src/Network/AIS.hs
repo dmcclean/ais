@@ -68,13 +68,13 @@ data AisMessage = ClassAPositionReport
                   , repeatIndicator :: Word8
                   , userID :: MMSI
                   , navigationalStatus :: NavigationalStatus
-                  , rateOfTurn :: Int8
+                  , rateOfTurn :: PackedRateOfTurn
                   , speedOverGround :: VesselSpeed
                   , positionAccuracy :: Bool
                   , longitude :: Longitude
                   , latitude :: Latitude
-                  , courseOverGround :: Word16
-                  , trueHeading :: Word16
+                  , courseOverGround :: Maybe Course
+                  , trueHeading :: Maybe Heading
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
                   , manueverIndicator :: Word8
@@ -151,7 +151,7 @@ data AisMessage = ClassAPositionReport
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   , eta :: Word32
-                  , draught :: Word8
+                  , draught :: VesselLength Word8
                   , destination :: Text
                   , dteNotReady :: Bool
                   }
@@ -253,11 +253,34 @@ getAcknowledgement = do
 
 getVesselDimensions :: BitGet VesselDimensions
 getVesselDimensions = do
-                        forwardOfReferencePoint <- getAsWord16 9
-                        aftOfReferencePoint <- getAsWord16 9
-                        portOfReferencePoint <- getAsWord16 6
-                        starboardOfReferencePoint <- getAsWord16 6
+                        forwardOfReferencePoint <- fmap coerce $ getAsWord16 9
+                        aftOfReferencePoint <- fmap coerce $ getAsWord16 9
+                        portOfReferencePoint <- fmap coerce $ getAsWord8 6
+                        starboardOfReferencePoint <- fmap coerce $ getAsWord8 6
                         return $ VesselDimensions { .. }
+
+getRateOfTurn :: BitGet PackedRateOfTurn
+getRateOfTurn = do
+                  n <- getAsWord8 8
+                  return $ case n of
+                             -128 -> RateNotAvailable
+                             -127 -> RatePortNoSensor
+                             127 -> RateStarboardNoSensor
+                             r -> RateSpecified r
+
+getCourse :: BitGet (Maybe Course)
+getCourse = do
+              n <- getAsWord16 12
+              return $ if n < 3600
+                         then Just $ coerce n
+                         else Nothing
+
+getHeading :: BitGet (Maybe Heading)
+getHeading = do
+               n <- getAsWord16 9
+               return $ if n < 360
+                          then Just $ coerce n
+                          else Nothing
 
 getPositionFixingDevice :: BitGet PositionFixingDevice
 getPositionFixingDevice = fmap (f . fromIntegral) $ getAsWord8 4
@@ -332,13 +355,13 @@ getClassAPositionReport messageType getCommState = do
                             repeatIndicator <- getAsWord8 2
                             userID <- getMMSI
                             navigationalStatus <- getNavigationalStatus
-                            rateOfTurn <- getAsInt8 8
+                            rateOfTurn <- getRateOfTurn
                             speedOverGround <- getVesselSpeed
                             positionAccuracy <- getBit
                             longitude <- getLongitude
                             latitude <- getLatitude
-                            courseOverGround <- getAsWord16 12
-                            trueHeading <- getAsWord16 9
+                            courseOverGround <- getCourse
+                            trueHeading <- getHeading
                             (timeStamp, positionFixingStatus) <- getTimeStamp
                             manueverIndicator <- getAsWord8 2
                             skip 3
@@ -523,7 +546,7 @@ getClassAStaticData = do
                         vesselDimensions <- getVesselDimensions
                         positionFixingDevice <- getPositionFixingDevice
                         eta <- getAsWord32 20
-                        draught <- getAsWord8 8
+                        draught <- fmap coerce $ getAsWord8 8
                         destination <- getSixBitText 20
                         dteNotReady <- getBit
                         skip 1

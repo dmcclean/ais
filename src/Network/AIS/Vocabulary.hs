@@ -1,5 +1,8 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Network.AIS.Vocabulary
 where
@@ -7,9 +10,14 @@ where
 import qualified Data.ExactPi.TypeLevel as E
 import Data.Int
 import Data.Word
-import Numeric.Units.Dimensional.FixedPoint hiding ((+))
+import Numeric.Units.Dimensional.FixedPoint
 import Numeric.Units.Dimensional.Quantities
+import Numeric.Units.Dimensional.SIUnits
+import Numeric.Units.Dimensional.Float
+import qualified Numeric.Units.Dimensional as D
 import Text.Printf
+import Prelude hiding ((+), (/), sqrt, (**))
+import qualified Prelude as P
 
 newtype MMSI = MMSI Word32
   deriving (Eq, Ord)
@@ -194,17 +202,53 @@ type Longitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 type VesselSpeed = SQuantity (E.ExactNatural 463 E./ E.ExactNatural 9000) DVelocity Word16
 type AircraftSpeed = SQuantity (E.ExactNatural 463 E./ E.ExactNatural 900) DVelocity Word16
 
-type VesselLength = SQuantity (E.One E./ E.ExactNatural 10) DLength Word16
+data RateOfTurn a = RateNotAvailable
+                  | RateStarboardNoSensor
+                  | RatePortNoSensor
+                  | RateSpecified a
+  deriving (Eq)
 
-data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: Word16
-                                         , aftOfReferencePoint :: Word16
-                                         , portOfReferencePoint :: Word16
-                                         , starboardOfReferencePoint :: Word16
+type Direction n a = SQuantity ((E.ExactNatural 2 E.* E.Pi) E./ E.ExactNatural n) DPlaneAngle a
+
+type Course = Direction 3600 Word16
+type Heading = Direction 360 Word16
+
+type PackedRateOfTurn = RateOfTurn Word8
+type UnpackedRateOfTurn = RateOfTurn (AngularVelocity Double)
+
+unpackRateOfTurn :: PackedRateOfTurn -> UnpackedRateOfTurn
+unpackRateOfTurn RateNotAvailable = RateNotAvailable
+unpackRateOfTurn RateStarboardNoSensor = RateStarboardNoSensor
+unpackRateOfTurn RatePortNoSensor = RatePortNoSensor
+unpackRateOfTurn (RateSpecified r) = RateSpecified r''
+  where
+    s = (realToFrac $ signum r) D.*~ (degree / minute)
+    r' = (realToFrac r P./ 4.733) P.** 2 D.*~ (degree / minute)
+    r'' = copySign s r'
+
+instance Show PackedRateOfTurn where
+  showsPrec _ RateNotAvailable = showString "RateNotAvailable"
+  showsPrec _ RateStarboardNoSensor = showString "RateStarboardNoSensor"
+  showsPrec _ RatePortNoSensor = showString "RatePortNoSensor"
+  showsPrec d r@(RateSpecified raw) = showParen (d > app_prec) showStr
+    where
+      showStr = showString "RateSpecified " . shows raw . showString " {- " . shows r' . showString " -}"
+      app_prec = 10 -- precedence of application
+      (RateSpecified r') = unpackRateOfTurn r
+
+deriving instance Show UnpackedRateOfTurn
+
+type VesselLength a = SQuantity (E.One E./ E.ExactNatural 10) DLength a
+
+data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: VesselLength Word16
+                                         , aftOfReferencePoint :: VesselLength Word16
+                                         , portOfReferencePoint :: VesselLength Word8
+                                         , starboardOfReferencePoint :: VesselLength Word8
                                          }
   deriving (Eq, Show)
 
-overallLength :: VesselDimensions -> Word16
+overallLength :: VesselDimensions -> VesselLength Word16
 overallLength dims = forwardOfReferencePoint dims + aftOfReferencePoint dims
 
-overallBeam :: VesselDimensions -> Word16
+overallBeam :: VesselDimensions -> VesselLength Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
