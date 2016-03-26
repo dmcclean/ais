@@ -41,11 +41,13 @@ getLatitude = fmap coerce getAsInt32 27
 getLongitude :: BitGet Longitude
 getLongitude = fmap coerce $ getAsInt32 28
 
-getVesselSpeed :: BitGet VesselSpeed
-getVesselSpeed = fmap coerce $ getAsWord16 10
-
-getAircraftSpeed :: BitGet AircraftSpeed
-getAircraftSpeed = fmap coerce $ getAsWord16 10
+getSpeed :: BitGet (Speed n Word16)
+getSpeed = do
+             n <- getAsWord16 10
+             return $ case n of
+                        1023 -> SpeedNotAvailable
+                        1022 -> SpeedHigh
+                        _ -> SpeedSpecified $ coerce n
 
 getAsInt8 :: Int -> BitGet Int8
 getAsInt8 n = fmap (signExtendRightAlignedWord n) (getAsWord8 n)
@@ -395,7 +397,7 @@ getClassAPositionReport messageType getCommState = do
                             userID <- getMMSI
                             navigationalStatus <- getNavigationalStatus
                             rateOfTurn <- getRateOfTurn
-                            speedOverGround <- getVesselSpeed
+                            speedOverGround <- getSpeed
                             positionAccuracy <- getBit
                             longitude <- getLongitude
                             latitude <- getLatitude
@@ -414,7 +416,7 @@ getSarAircraftPositionReport = do
                                  repeatIndicator <- getAsWord8 2
                                  userID <- getMMSI
                                  altitude <- getAltitude
-                                 aircraftSpeedOverGround <- getAircraftSpeed
+                                 aircraftSpeedOverGround <- getSpeed
                                  positionAccuracy <- getBit
                                  longitude <- getLongitude
                                  latitude <- getLatitude
