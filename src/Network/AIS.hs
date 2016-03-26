@@ -44,6 +44,9 @@ getLongitude = fmap coerce $ getAsInt32 28
 getVesselSpeed :: BitGet VesselSpeed
 getVesselSpeed = fmap coerce $ getAsWord16 10
 
+getAircraftSpeed :: BitGet AircraftSpeed
+getAircraftSpeed = fmap coerce $ getAsWord16 10
+
 getAsInt8 :: Int -> BitGet Int8
 getAsInt8 n = fmap (signExtendRightAlignedWord n) (getAsWord8 n)
 
@@ -204,6 +207,24 @@ data AisMessage = ClassAPositionReport
                   , sourceID :: MMSI
                   , reservations :: [Reservation]
                   }
+                | SarAircraftPositionReport
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , altitude :: Altitude
+                  , aircraftSpeedOverGround :: AircraftSpeed
+                  , positionAccuracy :: Bool
+                  , longitude :: Longitude
+                  , latitude :: Latitude
+                  , courseOverGround :: Maybe Course
+                  , timeStamp :: Maybe Word8
+                  , positionFixingStatus :: PositionFixingStatus
+                  , altitudeSensor :: AltitudeSensor
+                  , dteNotReady :: Bool
+                  , assignedModeFlag :: Bool
+                  , raimFlag :: Bool
+                  , communicationsState :: CommunicationsState
+                  }
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -282,6 +303,17 @@ getHeading = do
                           then Just $ coerce n
                           else Nothing
 
+getAltitude :: BitGet Altitude
+getAltitude = do
+                n <- getAsWord16 12
+                return $ case n of
+                           4095 -> AltNotAvailable
+                           4094 -> AltHigh
+                           _ -> AltSpecified $ coerce n
+
+getAltitudeSensor :: BitGet AltitudeSensor
+getAltitudeSensor = fmap (\x -> if x then AltBarometric else AltGnss) getBit
+
 getPositionFixingDevice :: BitGet PositionFixingDevice
 getPositionFixingDevice = fmap (f . fromIntegral) $ getAsWord8 4
   where
@@ -317,6 +349,13 @@ getITDMACommunicationsState = do
     parseIncrementAndSlots inc n | n <= 4    = (inc, n + 1)
                                  | otherwise = (inc + 8192, n - 4)
 
+getTaggedCommunicationsState :: BitGet CommunicationsState
+getTaggedCommunicationsState = do
+                                 isItdma <- getBit
+                                 if isItdma
+                                   then getITDMACommunicationsState
+                                   else getSOTDMACommunicationsState
+
 getMessage :: BitGet AisMessage
 getMessage = do
                messageType <- getMessageType
@@ -330,7 +369,7 @@ getMessage = do
         {-  6 -} MBinaryAddressedMessage -> getAddressedBinaryMessage
         {-  7 -} MBinaryAcknowledgement -> getAcknowledgementMessage MBinaryAcknowledgement
         {-  8 -} MBinaryBroadcastMessage -> getBinaryBroadcastMessage
-        {-  9 -} MStandardSarAircraftPositionReport -> undefined
+        {-  9 -} MStandardSarAircraftPositionReport -> getSarAircraftPositionReport
         {- 10 -} MTimeInquiry -> getTimeInquiry
         {- 11 -} MTimeResponse -> getTimeResponse
         {- 12 -} MAddressedSafetyRelatedMessage -> getAddressedSafetyRelatedMessage
@@ -368,6 +407,27 @@ getClassAPositionReport messageType getCommState = do
                             raimFlag <- getBit
                             communicationsState <- getCommState
                             return $ ClassAPositionReport { .. }
+
+getSarAircraftPositionReport :: BitGet AisMessage
+getSarAircraftPositionReport = do
+                                 let messageType = MStandardSarAircraftPositionReport
+                                 repeatIndicator <- getAsWord8 2
+                                 userID <- getMMSI
+                                 altitude <- getAltitude
+                                 aircraftSpeedOverGround <- getAircraftSpeed
+                                 positionAccuracy <- getBit
+                                 longitude <- getLongitude
+                                 latitude <- getLatitude
+                                 courseOverGround <- getCourse
+                                 (timeStamp, positionFixingStatus) <- getTimeStamp
+                                 altitudeSensor <- getAltitudeSensor
+                                 skip 7
+                                 dteNotReady <- getBit
+                                 skip 3
+                                 assignedModeFlag <- getBit
+                                 raimFlag <- getBit
+                                 communicationsState <- getTaggedCommunicationsState
+                                 return $ SarAircraftPositionReport { .. }
 
 getAddressedSafetyRelatedMessage :: BitGet AisMessage
 getAddressedSafetyRelatedMessage = do
@@ -644,10 +704,7 @@ getMultipleSlotBinaryMessage = do
                                  n <- remaining
                                  payload <- getLeftByteString (n - 24)
                                  skip 4
-                                 isItdma <- getBit
-                                 communicationsState <- if isItdma
-                                                          then getITDMACommunicationsState
-                                                          else getSOTDMACommunicationsState
+                                 communicationsState <- getTaggedCommunicationsState
                                  let retransmitFlag = False
                                  let sequenceNumber = Nothing
                                  let optionalCommunicationsState = Just communicationsState

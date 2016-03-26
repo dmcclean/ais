@@ -161,6 +161,11 @@ isFloatingAtoN aid = 20 <= x
   where
     x = fromEnum aid
 
+data Altitude = AltNotAvailable
+              | AltHigh
+              | AltSpecified (Length Word16)
+  deriving (Eq, Show)
+
 data AltitudeSensor = AltGnss
                     | AltBarometric
   deriving (Eq, Enum, Show, Read)
