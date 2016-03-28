@@ -233,6 +233,14 @@ data AisMessage = ClassAPositionReport
                   , sourceID :: MMSI
                   , assignments :: [Assignment]
                   }
+                | DgnssBroadcastMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , longitude :: Maybe Longitude
+                  , latitude :: Maybe Latitude
+                  , payload :: ByteString
+                  }
                 | SarAircraftPositionReport
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
@@ -549,7 +557,7 @@ getMessage = do
         {- 14 -} MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
         {- 15 -} MInterrogation -> getInterrogationMessage
         {- 16 -} MAssignmentModeCommand -> getAssignmentModeCommand
-        {- 17 -} MDgnssBroadcastBinaryMessage -> undefined
+        {- 17 -} MDgnssBroadcastBinaryMessage -> getDgnssBroadcastMessage
         {- 18 -} MStandardClassBPositionReport -> getStandardClassBPositionReport
         {- 19 -} MExtendedClassBPositionReport -> getExtendedClassBPositionReport
         {- 20 -} MDataLinkManagementMessage -> getDataLinkManagementMessage
@@ -832,6 +840,19 @@ getAcknowledgementMessage messageType = do
                                                    acknowledgements <- replicateM (n `div` 32) getAcknowledgement
                                                    return $ AcknowledgementMessage { .. }
                                             else error "Acknowledgement message contained partial acknowledgements of incorrect length."
+
+getDgnssBroadcastMessage :: BitGet AisMessage
+getDgnssBroadcastMessage = do
+                             let messageType = MDgnssBroadcastBinaryMessage
+                             repeatIndicator <- getAsWord8 2
+                             sourceID <- getMMSI
+                             skip 2
+                             longitude <- getLowResolutionLongitude
+                             latitude <- getLowResolutionLatitude
+                             skip 5
+                             n <- remaining
+                             payload <- getLeftByteString n
+                             return $ DgnssBroadcastMessage { .. }
 
 getChannelManagementCommand :: BitGet AisMessage
 getChannelManagementCommand = do
