@@ -59,13 +59,15 @@ getLowResolutionLatitude = fmap f $ getAsInt32 17
     f x | -108000 <= x && x <= 108000 = Just $ coerce (x * 1000)
         | otherwise                 = Nothing
 
-getSpeed :: BitGet (Speed n Word16)
-getSpeed = do
-             n <- getAsWord16 10
-             return $ case n of
-                        1023 -> SpeedNotAvailable
-                        1022 -> SpeedHigh
-                        _ -> SpeedSpecified $ coerce n
+getSpeed :: Int -> BitGet (Speed s Word16)
+getSpeed n = do
+               let na = (1 `shiftL` n) - 1
+               let h = na - 1
+               x <- getAsWord16 n
+               return $ case x of
+                          x' | x' == na -> SpeedNotAvailable
+                             | x' == h -> SpeedHigh
+                          _ -> SpeedSpecified $ coerce x
 
 getAsInt8 :: Int -> BitGet Int8
 getAsInt8 n = fmap (signExtendRightAlignedWord n) (getAsWord8 n)
@@ -92,7 +94,7 @@ data AisMessage = ClassAPositionReport
                   , userID :: MMSI
                   , navigationalStatus :: NavigationalStatus
                   , rateOfTurn :: PackedRateOfTurn
-                  , speedOverGround :: VesselSpeed
+                  , speedOverGround :: VelocityTenthsOfKnot
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
@@ -174,7 +176,7 @@ data AisMessage = ClassAPositionReport
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   , eta :: Word32
-                  , draught :: VesselLength Word8
+                  , draught :: LengthDecimeters Word8
                   , destination :: Text
                   , dteNotReady :: Bool
                   }
@@ -246,7 +248,7 @@ data AisMessage = ClassAPositionReport
                   , repeatIndicator :: Word8
                   , userID :: MMSI
                   , altitude :: Altitude
-                  , aircraftSpeedOverGround :: AircraftSpeed
+                  , speedOverGround' :: VelocityKnots
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
@@ -263,7 +265,7 @@ data AisMessage = ClassAPositionReport
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
                   , userID :: MMSI
-                  , speedOverGround :: VesselSpeed
+                  , speedOverGround :: VelocityTenthsOfKnot
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
@@ -280,7 +282,7 @@ data AisMessage = ClassAPositionReport
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
                   , userID :: MMSI
-                  , speedOverGround :: VesselSpeed
+                  , speedOverGround :: VelocityTenthsOfKnot
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
@@ -327,7 +329,7 @@ data AisMessage = ClassAPositionReport
                   , navigationalStatus :: NavigationalStatus
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
-                  , speedOverGround :: VesselSpeed
+                  , speedOverGround' :: VelocityKnots
                   , courseOverGround :: Maybe Course
                   , positionLatency :: Bool
                   }
@@ -413,6 +415,13 @@ getCourse = do
               return $ if n < 3600
                          then Just $ coerce n
                          else Nothing
+
+getLowResolutionCourse :: BitGet (Maybe Course)
+getLowResolutionCourse = do
+                           n <- getAsWord16 9
+                           return $ if n < 360
+                                      then Just $ coerce (n * 10)
+                                      else Nothing
 
 getHeading :: BitGet (Maybe Heading)
 getHeading = do
@@ -588,7 +597,7 @@ getClassAPositionReport messageType getCommState = do
                             userID <- getMMSI
                             navigationalStatus <- getNavigationalStatus
                             rateOfTurn <- getRateOfTurn
-                            speedOverGround <- getSpeed
+                            speedOverGround <- getSpeed 10
                             positionAccuracy <- getBit
                             longitude <- getLongitude
                             latitude <- getLatitude
@@ -607,7 +616,7 @@ getSarAircraftPositionReport = do
                                  repeatIndicator <- getAsWord8 2
                                  userID <- getMMSI
                                  altitude <- getAltitude
-                                 aircraftSpeedOverGround <- getSpeed
+                                 speedOverGround' <- getSpeed 10
                                  positionAccuracy <- getBit
                                  longitude <- getLongitude
                                  latitude <- getLatitude
@@ -930,7 +939,7 @@ getStandardClassBPositionReport = do
                                     repeatIndicator <- getAsWord8 2
                                     userID <- getMMSI
                                     skip 8
-                                    speedOverGround <- getSpeed
+                                    speedOverGround <- getSpeed 10
                                     positionAccuracy <- getBit
                                     longitude <- getLongitude
                                     latitude <- getLatitude
@@ -950,7 +959,7 @@ getExtendedClassBPositionReport = do
                                     repeatIndicator <- getAsWord8 2
                                     userID <- getMMSI
                                     skip 8
-                                    speedOverGround <- getSpeed
+                                    speedOverGround <- getSpeed 10
                                     positionAccuracy <- getBit
                                     longitude <- getLongitude
                                     latitude <- getLatitude
@@ -1020,9 +1029,8 @@ getLongRangePositionReport = do
                                navigationalStatus <- getNavigationalStatus
                                longitude <- getLowResolutionLongitude
                                latitude <- getLowResolutionLatitude
-                               skip 15
-                               let speedOverGround = undefined
-                               let courseOverGround = undefined
+                               speedOverGround' <- getSpeed 6
+                               courseOverGround <- getLowResolutionCourse
                                positionLatency <- getBit
                                skip 1
                                return $ LongRangePositionReport { .. }

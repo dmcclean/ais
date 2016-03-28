@@ -263,8 +263,8 @@ data Speed s a = SpeedNotAvailable
                | SpeedSpecified (SQuantity s DVelocity a)
   deriving (Eq, Show)
 
-type VesselSpeed = Speed (E.ExactNatural 463 E./ E.ExactNatural 9000) Word16
-type AircraftSpeed = Speed (E.ExactNatural 463 E./ E.ExactNatural 900) Word16
+type VelocityTenthsOfKnot = Speed (E.ExactNatural 463 E./ E.ExactNatural 9000) Word16
+type VelocityKnots = Speed (E.ExactNatural 463 E./ E.ExactNatural 900) Word16
 
 data RateOfTurn a = RateNotAvailable
                   | RateStarboardNoSensor
@@ -306,19 +306,19 @@ type LengthNauticalMiles a = SQuantity (E.ExactNatural 1852) DLength a
 
 type TimeMinutes a = SQuantity (E.ExactNatural 60) DTime a
 
-type VesselLength a = SQuantity (E.One E./ E.ExactNatural 10) DLength a
+type LengthDecimeters a = SQuantity (E.One E./ E.ExactNatural 10) DLength a
 
-data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: VesselLength Word16
-                                         , aftOfReferencePoint :: VesselLength Word16
-                                         , portOfReferencePoint :: VesselLength Word8
-                                         , starboardOfReferencePoint :: VesselLength Word8
+data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: LengthDecimeters Word16
+                                         , aftOfReferencePoint :: LengthDecimeters Word16
+                                         , portOfReferencePoint :: LengthDecimeters Word8
+                                         , starboardOfReferencePoint :: LengthDecimeters Word8
                                          }
   deriving (Eq, Show)
 
-overallLength :: VesselDimensions -> VesselLength Word16
+overallLength :: VesselDimensions -> LengthDecimeters Word16
 overallLength dims = forwardOfReferencePoint dims + aftOfReferencePoint dims
 
-overallBeam :: VesselDimensions -> VesselLength Word8
+overallBeam :: VesselDimensions -> LengthDecimeters Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
 
 data ClassBCapabilities = ClassBCapabilities { carrierSenseUnit :: Bool
