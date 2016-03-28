@@ -262,3 +262,11 @@ overallLength dims = forwardOfReferencePoint dims + aftOfReferencePoint dims
 
 overallBeam :: VesselDimensions -> VesselLength Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
+
+data ClassBCapabilities = ClassBCapabilities { carrierSenseUnit :: Bool
+                                             , equippedWithDisplay :: Bool
+                                             , equippedWithDigitalSelectiveCalling :: Bool
+                                             , capableOfOperatingOverEntireMarineBand :: Bool
+                                             , supportsChannelManagement :: Bool
+                                             }
+  deriving (Eq, Show, Read)

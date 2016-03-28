@@ -233,6 +233,23 @@ data AisMessage = ClassAPositionReport
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
                   }
+                | StandardClassBPositionReport
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , speedOverGround :: VesselSpeed
+                  , positionAccuracy :: Bool
+                  , longitude :: Maybe Longitude
+                  , latitude :: Maybe Latitude
+                  , courseOverGround :: Maybe Course
+                  , trueHeading :: Maybe Heading
+                  , timeStamp :: Maybe Word8
+                  , positionFixingStatus :: PositionFixingStatus
+                  , capabilities :: ClassBCapabilities
+                  , assignedModeFlag :: Bool
+                  , raimFlag :: Bool
+                  , communicationsState :: CommunicationsState
+                  }
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -364,6 +381,15 @@ getTaggedCommunicationsState = do
                                    then getITDMACommunicationsState
                                    else getSOTDMACommunicationsState
 
+getClassBCapabilities :: BitGet ClassBCapabilities
+getClassBCapabilities = do
+                          carrierSenseUnit <- getBit
+                          equippedWithDisplay <- getBit
+                          equippedWithDigitalSelectiveCalling <- getBit
+                          capableOfOperatingOverEntireMarineBand <- getBit
+                          supportsChannelManagement <- getBit
+                          return $ ClassBCapabilities { .. }
+
 getMessage :: BitGet AisMessage
 getMessage = do
                messageType <- getMessageType
@@ -386,7 +412,7 @@ getMessage = do
         {- 15 -} MInterrogation -> getInterrogationMessage
         {- 16 -} MAssignmentModeCommand -> undefined
         {- 17 -} MDgnssBroadcastBinaryMessage -> undefined
-        {- 18 -} MStandardClassBPositionReport -> undefined
+        {- 18 -} MStandardClassBPositionReport -> getStandardClassBPositionReport
         {- 19 -} MExtendedClassBPositionReport -> undefined
         {- 20 -} MDataLinkManagementMessage -> getDataLinkManagementMessage
         {- 21 -} MAidToNavigationReport -> getAidToNavigationReport
@@ -675,6 +701,26 @@ getAidToNavigationReport = do
                              skip s
                              let name = T.concat [initialName, extendedName]
                              return $ AidToNavigationReport { .. }
+
+getStandardClassBPositionReport :: BitGet AisMessage
+getStandardClassBPositionReport = do
+                                    let messageType = MStandardClassBPositionReport
+                                    repeatIndicator <- getAsWord8 2
+                                    userID <- getMMSI
+                                    skip 8
+                                    speedOverGround <- getSpeed
+                                    positionAccuracy <- getBit
+                                    longitude <- getLongitude
+                                    latitude <- getLatitude
+                                    courseOverGround <- getCourse
+                                    trueHeading <- getHeading
+                                    (timeStamp, positionFixingStatus) <- getTimeStamp
+                                    skip 2
+                                    capabilities <- getClassBCapabilities
+                                    assignedModeFlag <- getBit
+                                    raimFlag <- getBit
+                                    communicationsState <- getTaggedCommunicationsState
+                                    return $ StandardClassBPositionReport { .. }
 
 getSingleSlotBinaryMessage :: BitGet AisMessage
 getSingleSlotBinaryMessage = do
