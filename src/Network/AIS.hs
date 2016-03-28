@@ -35,17 +35,17 @@ getRemainingSixBitText = do
                            bits <- remaining
                            getSixBitText $ bits `div` 6
 
-getLatitude :: BitGet (Maybe Latitude)
-getLatitude = fmap f $ getAsInt32 27
-  where
-    f x | -108000000 <= x && x <= 108000000 = Just $ coerce x
-        | otherwise                         = Nothing
-
 getLongitude :: BitGet (Maybe Longitude)
 getLongitude = fmap f $ getAsInt32 28
   where
     f x | -54000000 <= x && x <= 54000000 = Just $ coerce x
         | otherwise                       = Nothing
+
+getLatitude :: BitGet (Maybe Latitude)
+getLatitude = fmap f $ getAsInt32 27
+  where
+    f x | -108000000 <= x && x <= 108000000 = Just $ coerce x
+        | otherwise                         = Nothing
 
 getSpeed :: BitGet (Speed n Word16)
 getSpeed = do
@@ -215,6 +215,12 @@ data AisMessage = ClassAPositionReport
                   , sourceID :: MMSI
                   , reservations :: [Reservation]
                   }
+                | AssignmentModeCommand
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , sourceID :: MMSI
+                  , assignments :: [Assignment]
+                  }
                 | SarAircraftPositionReport
                   { messageType :: MessageID
                   , repeatIndicator :: Word8
@@ -285,6 +291,13 @@ getReservation = do
                    reservationTimeoutMinutes <- getAsWord8 3
                    reservationIncrement <- getAsWord16 11
                    return $ Reservation { .. }
+
+getAssignment :: BitGet Assignment
+getAssignment = do
+                  targetID <- getMMSI
+                  assignedSlotOffset <- getAsWord16 12
+                  assignedIncrement <- getAsWord16 10
+                  return $ Assignment { .. }
 
 getTimeStamp :: BitGet (Maybe Word8, PositionFixingStatus)
 getTimeStamp = do
@@ -430,7 +443,7 @@ getMessage = do
         {- 13 -} MSafetyRelatedAcknowledgement -> getAcknowledgementMessage MSafetyRelatedAcknowledgement
         {- 14 -} MSafetyRelatedBroadcastMessage -> getSafetyRelatedBroadcastMessage
         {- 15 -} MInterrogation -> getInterrogationMessage
-        {- 16 -} MAssignmentModeCommand -> undefined
+        {- 16 -} MAssignmentModeCommand -> getAssignmentModeCommand
         {- 17 -} MDgnssBroadcastBinaryMessage -> undefined
         {- 18 -} MStandardClassBPositionReport -> getStandardClassBPositionReport
         {- 19 -} MExtendedClassBPositionReport -> getExtendedClassBPositionReport
@@ -575,6 +588,24 @@ getDataLinkManagementMessage = do
                                  skip s
                                  let reservations = Prelude.filter isValidReservation (r:rs)
                                  return $ DataLinkManagementMessage { .. }
+
+getAssignmentModeCommand :: BitGet AisMessage
+getAssignmentModeCommand = do
+                             let messageType = MAssignmentModeCommand
+                             repeatIndicator <- getAsWord8 2
+                             sourceID <- getMMSI
+                             skip 2
+                             assignmentA <- getAssignment
+                             n <- remaining
+                             assignments <- case n of
+                                              4 -> do
+                                                     skip 4
+                                                     return $ [assignmentA]
+                                              56 -> do
+                                                      assignmentB <- getAssignment
+                                                      return $ [assignmentA, assignmentB]
+                                              _ -> error "Invalid assignment mode command."
+                             return $ AssignmentModeCommand { .. }
 
 getInterrogationMessage :: BitGet AisMessage
 getInterrogationMessage = do

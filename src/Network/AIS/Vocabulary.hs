@@ -200,6 +200,12 @@ data Reservation = Reservation { reservedOffsetNumber :: Word16
 isValidReservation :: Reservation -> Bool
 isValidReservation r = reservationTimeoutMinutes r > 0 && reservedNumberOfSlots r > 0
 
+data Assignment = Assignment { targetID :: MMSI
+                             , assignedSlotOffset :: Word16
+                             , assignedIncrement :: Word16
+                             }
+  deriving (Eq, Show)
+
 type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
 type Latitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 type Longitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
