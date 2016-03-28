@@ -47,6 +47,18 @@ getLatitude = fmap f $ getAsInt32 27
     f x | -108000000 <= x && x <= 108000000 = Just $ coerce x
         | otherwise                         = Nothing
 
+getLowResolutionLongitude :: BitGet (Maybe Longitude)
+getLowResolutionLongitude = fmap f $ getAsInt32 18
+  where
+    f x | -54000 <= x && x <= 54000 = Just $ coerce (x * 1000)
+        | otherwise                 = Nothing
+
+getLowResolutionLatitude :: BitGet (Maybe Latitude)
+getLowResolutionLatitude = fmap f $ getAsInt32 17
+  where
+    f x | -108000 <= x && x <= 108000 = Just $ coerce (x * 1000)
+        | otherwise                 = Nothing
+
 getSpeed :: BitGet (Speed n Word16)
 getSpeed = do
              n <- getAsWord16 10
@@ -276,6 +288,17 @@ data AisMessage = ClassAPositionReport
                   , dteNotReady :: Bool
                   , assignedModeFlag :: Bool
                   }
+                | ChannelManagementCommand
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , channelA :: Channel
+                  , channelB :: Channel
+                  , transmissionMode :: TransmissionMode
+                  , useLowPower :: Bool
+                  , targetDesignation :: TargetDesignation
+                  , transitionalZoneSize :: NauticalMiles Word8
+                  }
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -338,6 +361,11 @@ getVesselDimensions = do
                         starboardOfReferencePoint <- fmap coerce $ getAsWord8 6
                         return $ VesselDimensions { .. }
 
+getTransitionalZoneSize :: BitGet (NauticalMiles Word8)
+getTransitionalZoneSize = do
+                            n <- getAsWord8 3
+                            return . coerce $ n + 1
+
 getRateOfTurn :: BitGet PackedRateOfTurn
 getRateOfTurn = do
                   n <- getAsWord8 8
@@ -377,6 +405,57 @@ getPositionFixingDevice = fmap (f . fromIntegral) $ getAsWord8 4
   where
     f 15 = PosFixInternalGnss
     f n = toEnum n
+
+getStationType :: BitGet StationType
+getStationType = do
+                   n <- getAsWord8 4
+                   let n' = fromIntegral n :: Int
+                   return $ if n' <= 10
+                              then toEnum n'
+                              else StationsReserved
+
+getTransmissionMode :: Int -> BitGet TransmissionMode
+getTransmissionMode n = fmap (f . fromIntegral) $ getAsWord8 n
+  where
+    f :: Int -> TransmissionMode
+    f 0 = TransmitAB
+    f 1 = TransmitA
+    f 2 = TransmitB
+    f _ = TransmitReserved
+
+getChannel :: BitGet Channel
+getChannel = getAsWord16 12
+
+getTargetDesignation :: BitGet TargetDesignation
+getTargetDesignation = do
+                         bs1 <- getLeftByteString 35
+                         bs2 <- getLeftByteString 35
+                         isAddressed <- getBit
+                         return $ if isAddressed
+                                    then addressed bs1 bs2
+                                    else regional bs1 bs2
+  where
+    runBitGet' :: ByteString -> BitGet a -> a
+    runBitGet' bs g = case runBitGet bs g of
+                        Left err -> error err
+                        Right x -> x
+    addressed :: ByteString -> ByteString -> TargetDesignation
+    addressed a b = AddressedTargetDesignation [address a, address b]
+    address :: ByteString -> MMSI
+    address a = runBitGet' a $ getMMSI <* skip 5
+    regional :: ByteString -> ByteString -> TargetDesignation
+    regional a b = GeographicTargetDesignation lonE latN lonW latS
+      where
+        Just (lonE, latN) = point a
+        Just (lonW, latS) = point b
+    point :: ByteString -> Maybe (Longitude, Latitude)
+    point bs = runBitGet' bs $ do
+                                 lon <- getLowResolutionLongitude
+                                 lat <- getLowResolutionLatitude
+                                 return $ do
+                                            lon' <- lon
+                                            lat' <- lat
+                                            return $ (lon', lat')
 
 getSOTDMACommunicationsState :: BitGet CommunicationsState
 getSOTDMACommunicationsState = do
@@ -449,7 +528,7 @@ getMessage = do
         {- 19 -} MExtendedClassBPositionReport -> getExtendedClassBPositionReport
         {- 20 -} MDataLinkManagementMessage -> getDataLinkManagementMessage
         {- 21 -} MAidToNavigationReport -> getAidToNavigationReport
-        {- 22 -} MChannelManagement -> undefined
+        {- 22 -} MChannelManagement -> getChannelManagementCommand
         {- 23 -} MGroupAssignmentCommand -> undefined
         {- 24 -} MStaticDataReport -> getStaticDataReport
         {- 25 -} MSingleSlotBinaryMessage -> getSingleSlotBinaryMessage
@@ -727,6 +806,22 @@ getAcknowledgementMessage messageType = do
                                                    acknowledgements <- replicateM (n `div` 32) getAcknowledgement
                                                    return $ AcknowledgementMessage { .. }
                                             else error "Acknowledgement message contained partial acknowledgements of incorrect length."
+
+getChannelManagementCommand :: BitGet AisMessage
+getChannelManagementCommand = do
+                                let messageType = MChannelManagement
+                                repeatIndicator <- getAsWord8 2
+                                userID <- getMMSI
+                                skip 2
+                                channelA <- getChannel
+                                channelB <- getChannel
+                                transmissionMode <- getTransmissionMode 4
+                                useLowPower <- getBit
+                                targetDesignation <- getTargetDesignation
+                                skip 2
+                                transitionalZoneSize <- getTransitionalZoneSize
+                                skip 23
+                                return $ ChannelManagementCommand { .. }
 
 getAidToNavigationReport :: BitGet AisMessage
 getAidToNavigationReport = do

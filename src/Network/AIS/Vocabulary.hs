@@ -200,15 +200,41 @@ data Reservation = Reservation { reservedOffsetNumber :: Word16
 isValidReservation :: Reservation -> Bool
 isValidReservation r = reservationTimeoutMinutes r > 0 && reservedNumberOfSlots r > 0
 
+data StationType = StationsAllMobile
+                 | StationsClassAMobile
+                 | StationsClassBMobile
+                 | StationsSarAirborneMobile
+                 | StationsClassBSelfOrganizingMobile
+                 | StationsClassBCarrierSenseMobile
+                 | StationsInlandWaterways
+                 | StationsRegionalUseA
+                 | StationsRegionalUseB
+                 | StationsRegionalUseC
+                 | StationsBaseStationCoverageArea
+                 | StationsReserved
+  deriving (Eq, Enum, Read, Show)
+
+data TransmissionMode = TransmitAB
+                      | TransmitA
+                      | TransmitB
+                      | TransmitReserved
+  deriving (Eq, Enum, Read, Show)
+
 data Assignment = Assignment { targetID :: MMSI
                              , assignedSlotOffset :: Word16
                              , assignedIncrement :: Word16
                              }
   deriving (Eq, Show)
 
+type Channel = Word16
+
+data TargetDesignation = GeographicTargetDesignation Longitude Latitude Longitude Latitude
+                       | AddressedTargetDesignation [MMSI]
+  deriving (Eq, Show)
+
 type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
-type Latitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 type Longitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
+type Latitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
 
 data Speed s a = SpeedNotAvailable
                | SpeedHigh
@@ -253,6 +279,8 @@ instance Show PackedRateOfTurn where
       (RateSpecified r') = unpackRateOfTurn r
 
 deriving instance Show UnpackedRateOfTurn
+
+type NauticalMiles a = SQuantity (E.ExactNatural 1852) DLength a
 
 type VesselLength a = SQuantity (E.One E./ E.ExactNatural 10) DLength a
 
