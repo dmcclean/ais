@@ -228,9 +228,31 @@ data Assignment = Assignment { targetID :: MMSI
 
 type Channel = Word16
 
-data TargetDesignation = GeographicTargetDesignation Longitude Latitude Longitude Latitude
+data TargetDesignation = GeographicTargetDesignation Region
                        | AddressedTargetDesignation [MMSI]
   deriving (Eq, Show)
+
+data Region = Region { east :: Longitude
+                     , north :: Latitude
+                     , west :: Longitude
+                     , south :: Latitude
+                     }
+  deriving (Eq, Show)
+
+data AssignedReportingInterval = IntervalAsAutonomous
+                               | IntervalTenMinutes
+                               | Interval6Minutes
+                               | Interval3Minutes
+                               | Interval1Minute
+                               | Interval30Seconds
+                               | Interval15Seconds
+                               | Interval10Seconds
+                               | Interval5Seconds
+                               | IntervalNextShorter
+                               | IntervalNextLonger
+                               | Interval2Seconds
+                               | IntervalReserved
+  deriving (Eq, Enum, Show, Read)
 
 type TenThousandthOfArcMinute = E.Pi E./ (E.ExactNatural 108000000)
 type Longitude = SQuantity TenThousandthOfArcMinute DPlaneAngle Int32
@@ -280,7 +302,9 @@ instance Show PackedRateOfTurn where
 
 deriving instance Show UnpackedRateOfTurn
 
-type NauticalMiles a = SQuantity (E.ExactNatural 1852) DLength a
+type LengthNauticalMiles a = SQuantity (E.ExactNatural 1852) DLength a
+
+type TimeMinutes a = SQuantity (E.ExactNatural 60) DTime a
 
 type VesselLength a = SQuantity (E.One E./ E.ExactNatural 10) DLength a
 

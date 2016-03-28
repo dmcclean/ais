@@ -297,7 +297,18 @@ data AisMessage = ClassAPositionReport
                   , transmissionMode :: TransmissionMode
                   , useLowPower :: Bool
                   , targetDesignation :: TargetDesignation
-                  , transitionalZoneSize :: NauticalMiles Word8
+                  , transitionalZoneSize :: LengthNauticalMiles Word8
+                  }
+                | GroupAssignmentCommand
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , region :: Region
+                  , stationType :: StationType
+                  , typeOfShipAndCargo :: Word8
+                  , transmissionMode :: TransmissionMode
+                  , reportingInterval :: AssignedReportingInterval
+                  , quietTime :: TimeMinutes Word8
                   }
   deriving (Eq, Show)
 
@@ -361,7 +372,7 @@ getVesselDimensions = do
                         starboardOfReferencePoint <- fmap coerce $ getAsWord8 6
                         return $ VesselDimensions { .. }
 
-getTransitionalZoneSize :: BitGet (NauticalMiles Word8)
+getTransitionalZoneSize :: BitGet (LengthNauticalMiles Word8)
 getTransitionalZoneSize = do
                             n <- getAsWord8 3
                             return . coerce $ n + 1
@@ -423,6 +434,13 @@ getTransmissionMode n = fmap (f . fromIntegral) $ getAsWord8 n
     f 2 = TransmitB
     f _ = TransmitReserved
 
+getAssignedReportingInterval :: BitGet AssignedReportingInterval
+getAssignedReportingInterval = fmap (f . fromIntegral) $ getAsWord8 4
+  where
+    f n = if n >= 12
+            then IntervalReserved
+            else toEnum n
+
 getChannel :: BitGet Channel
 getChannel = getAsWord16 12
 
@@ -444,7 +462,7 @@ getTargetDesignation = do
     address :: ByteString -> MMSI
     address a = runBitGet' a $ getMMSI <* skip 5
     regional :: ByteString -> ByteString -> TargetDesignation
-    regional a b = GeographicTargetDesignation lonE latN lonW latS
+    regional a b = GeographicTargetDesignation $ Region lonE latN lonW latS
       where
         Just (lonE, latN) = point a
         Just (lonW, latS) = point b
@@ -456,6 +474,14 @@ getTargetDesignation = do
                                             lon' <- lon
                                             lat' <- lat
                                             return $ (lon', lat')
+
+getRegion :: BitGet Region
+getRegion = do
+              Just east <- getLowResolutionLongitude
+              Just north <- getLowResolutionLatitude
+              Just west <- getLowResolutionLongitude
+              Just south <- getLowResolutionLatitude
+              return $ Region { .. }
 
 getSOTDMACommunicationsState :: BitGet CommunicationsState
 getSOTDMACommunicationsState = do
@@ -529,7 +555,7 @@ getMessage = do
         {- 20 -} MDataLinkManagementMessage -> getDataLinkManagementMessage
         {- 21 -} MAidToNavigationReport -> getAidToNavigationReport
         {- 22 -} MChannelManagement -> getChannelManagementCommand
-        {- 23 -} MGroupAssignmentCommand -> undefined
+        {- 23 -} MGroupAssignmentCommand -> getGroupAssignmentCommand
         {- 24 -} MStaticDataReport -> getStaticDataReport
         {- 25 -} MSingleSlotBinaryMessage -> getSingleSlotBinaryMessage
         {- 26 -} MMultipleSlotBinaryMessage -> getMultipleSlotBinaryMessage
@@ -822,6 +848,22 @@ getChannelManagementCommand = do
                                 transitionalZoneSize <- getTransitionalZoneSize
                                 skip 23
                                 return $ ChannelManagementCommand { .. }
+
+getGroupAssignmentCommand :: BitGet AisMessage
+getGroupAssignmentCommand = do
+                              let messageType = MGroupAssignmentCommand
+                              repeatIndicator <- getAsWord8 2
+                              userID <- getMMSI
+                              skip 2
+                              region <- getRegion
+                              stationType <- getStationType
+                              typeOfShipAndCargo <- getAsWord8 8
+                              skip 22
+                              transmissionMode <- getTransmissionMode 2
+                              reportingInterval <- getAssignedReportingInterval
+                              quietTime <- fmap coerce $ getAsWord8 4
+                              skip 6
+                              return $ GroupAssignmentCommand { .. }
 
 getAidToNavigationReport :: BitGet AisMessage
 getAidToNavigationReport = do
