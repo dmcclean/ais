@@ -318,6 +318,19 @@ data AisMessage = ClassAPositionReport
                   , reportingInterval :: AssignedReportingInterval
                   , quietTime :: TimeMinutes Word8
                   }
+                | LongRangePositionReport
+                  { messageType :: MessageID
+                  , repeatIndicator :: Word8
+                  , userID :: MMSI
+                  , positionAccuracy :: Bool
+                  , raimFlag :: Bool
+                  , navigationalStatus :: NavigationalStatus
+                  , longitude :: Maybe Longitude
+                  , latitude :: Maybe Latitude
+                  , speedOverGround :: VesselSpeed
+                  , courseOverGround :: Maybe Course
+                  , positionLatency :: Bool
+                  }
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -567,7 +580,7 @@ getMessage = do
         {- 24 -} MStaticDataReport -> getStaticDataReport
         {- 25 -} MSingleSlotBinaryMessage -> getSingleSlotBinaryMessage
         {- 26 -} MMultipleSlotBinaryMessage -> getMultipleSlotBinaryMessage
-        {- 27 -} MLongRangePositionReport -> undefined
+        {- 27 -} MLongRangePositionReport -> getLongRangePositionReport
 
 getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
 getClassAPositionReport messageType getCommState = do
@@ -996,6 +1009,23 @@ getMultipleSlotBinaryMessage = do
                                  let sequenceNumber = Nothing
                                  let optionalCommunicationsState = Just communicationsState
                                  return $ BinaryMessage { .. }
+
+getLongRangePositionReport :: BitGet AisMessage
+getLongRangePositionReport = do
+                               let messageType = MLongRangePositionReport
+                               repeatIndicator <- getAsWord8 2
+                               userID <- getMMSI
+                               positionAccuracy <- getBit
+                               raimFlag <- getBit
+                               navigationalStatus <- getNavigationalStatus
+                               longitude <- getLowResolutionLongitude
+                               latitude <- getLowResolutionLatitude
+                               skip 15
+                               let speedOverGround = undefined
+                               let courseOverGround = undefined
+                               positionLatency <- getBit
+                               skip 1
+                               return $ LongRangePositionReport { .. }
 
 makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> UTCTime
 makeUtcTime y mo d h m s = UTCTime { .. }
