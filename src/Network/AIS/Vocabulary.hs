@@ -293,17 +293,19 @@ type VelocityKnots = Speed (E.ExactNatural 463 E./ E.ExactNatural 900) Word16
 data RateOfTurn a = RateNotAvailable -- ^ The rate of turn is not available.
                   | RateStarboardNoSensor -- ^ The vessel is turning to starboard at a rate exceeding 5 degrees per 30 seconds. A measured rate is not available.
                   | RatePortNoSensor -- ^ The vessel is turning to port at a rate exceeding 5 degrees per 30 seconds. A measured rate is not available.
-                  | RateSpecified a -- ^ The vessel is turning at a specified rate.
+                  | RateSpecified a -- ^ The vessel is turning at a specified rate. Negative values specify turns to port, positive values specify turns to starboard.
   deriving (Eq)
 
 -- | The rate at which a vessel is changing its heading, with measured rates represented in a compact
 -- non-linear transmission format specified in Table 48.
 type PackedRateOfTurn = RateOfTurn Word8
 
--- | The rate at which a vessel is changing its heading, with measured rates represented in floating-point format.
+-- | The rate at which a vessel is changing its heading, with measured rates represented
+-- in floating-point 'AngularVelocity' format.
 type UnpackedRateOfTurn = RateOfTurn (AngularVelocity Double)
 
--- | Converts a 'RateOfTurn' from the compact 'PackedRateOfTurn' format to the linear and convenient 'UnpackedRateOfTurn' format.
+-- | Converts a 'RateOfTurn' from the compact 'PackedRateOfTurn' format used in AIS messages
+-- to the linear and convenient 'UnpackedRateOfTurn' format.
 unpackRateOfTurn :: PackedRateOfTurn -> UnpackedRateOfTurn
 unpackRateOfTurn RateNotAvailable = RateNotAvailable
 unpackRateOfTurn RateStarboardNoSensor = RateStarboardNoSensor
@@ -314,6 +316,8 @@ unpackRateOfTurn (RateSpecified r) = RateSpecified r''
     r' = (realToFrac r P./ 4.733) P.** 2 D.*~ (degree / minute)
     r'' = copySign r' s
 
+-- | Converts a 'RateOfTurn' from the linear and convenient 'UnpackedRateOfTurn' format
+-- to the compact 'PackedRateOfTurn' format used in AIS messages.
 packRateOfTurn :: UnpackedRateOfTurn -> PackedRateOfTurn
 packRateOfTurn RateNotAvailable = RateNotAvailable
 packRateOfTurn RateStarboardNoSensor = RateStarboardNoSensor
