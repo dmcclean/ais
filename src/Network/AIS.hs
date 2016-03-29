@@ -446,7 +446,8 @@ getPositionFixingDevice :: BitGet PositionFixingDevice
 getPositionFixingDevice = f . fromIntegral <$> getAsWord8 4
   where
     f 15 = PosFixInternalGnss
-    f n = toEnum n
+    f n | 9 <= n && n <= 14 = PosFixReserved
+        | otherwise         = toEnum n
 
 getStationType :: BitGet StationType
 getStationType = do
