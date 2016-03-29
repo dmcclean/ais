@@ -477,34 +477,17 @@ getChannel = getAsWord16 12
 
 getTargetDesignation :: BitGet TargetDesignation
 getTargetDesignation = do
-                         bs1 <- getLeftByteString 35
-                         bs2 <- getLeftByteString 35
-                         isAddressed <- getBit
-                         return $ if isAddressed
-                                    then addressed bs1 bs2
-                                    else regional bs1 bs2
-  where
-    runBitGet' :: ByteString -> BitGet a -> a
-    runBitGet' bs g = case runBitGet bs g of
-                        Left err -> error err
-                        Right x -> x
-    addressed :: ByteString -> ByteString -> TargetDesignation
-    addressed a b = AddressedTargetDesignation [address a, address b]
-    address :: ByteString -> MMSI
-    address a = runBitGet' a $ getMMSI <* skip 5
-    regional :: ByteString -> ByteString -> TargetDesignation
-    regional a b = GeographicTargetDesignation $ Region lonE latN lonW latS
-      where
-        Just (lonE, latN) = point a
-        Just (lonW, latS) = point b
-    point :: ByteString -> Maybe (Longitude, Latitude)
-    point bs = runBitGet' bs $ do
-                                 lon <- getLowResolutionLongitude
-                                 lat <- getLowResolutionLatitude
-                                 return $ do
-                                            lon' <- lon
-                                            lat' <- lat
-                                            return $ (lon', lat')
+                         isAddresed <- lookAhead $ skip 70 *> getBit
+                         result <- if isAddresed
+                                     then do
+                                            a1 <- getMMSI
+                                            skip 5
+                                            a2 <- getMMSI
+                                            skip 5
+                                            return $ AddressedTargetDesignation [a1, a2]
+                                     else GeographicTargetDesignation <$> getRegion
+                         skip 1 -- skip the addressed/regional designation bit that we looked ahead for
+                         return result
 
 getRegion :: BitGet Region
 getRegion = do
