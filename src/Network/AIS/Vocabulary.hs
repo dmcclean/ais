@@ -125,11 +125,12 @@ data PositionFixingStatus = PosStatusNormal -- ^ The position fixing device is o
                           | PosStatusInoperative -- ^ The position fixing device is inoperative.
   deriving (Eq, Enum, Show, Read)
 
-data AidToNavigation = AidUnspecified
-                     | AidReferencePoint
-                     | AidRacon
-                     | AidFixedOffshoreStructure
-                     | AidEmergencyWreckMarkingBuoy
+-- | The nature of an aid to navigation.
+data AidToNavigation = AidUnspecified -- ^ The type of aid to navigation is unspecified.
+                     | AidReferencePoint -- ^ A reference point for use in navigation or communication.
+                     | AidRacon -- ^ A radar beacon.
+                     | AidFixedOffshoreStructure -- ^ A fixed structure off-shore, such as an oil platform or wind farm.
+                     | AidEmergencyWreckMarkingBuoy -- ^ An emergency wreck marking buoy, generally used to mark the location of a recent and therefore uncharted wreck.
                      | AidLightWithoutSectors
                      | AidLightWithSectors
                      | AidLeadingLightFront
@@ -156,7 +157,7 @@ data AidToNavigation = AidUnspecified
                      | AidIsolatedDanger
                      | AidSafeWater
                      | AidSpecialMark
-                     | AidLightVesselLanbyRig
+                     | AidLightVesselLanbyRig -- ^ A light vessel, Large Automated Navigation Buoy, or rig.
   deriving (Eq, Enum, Show, Read)
 
 -- | 'True' if an 'AidToNavigation' type denotes a fixed aid to navigation.
