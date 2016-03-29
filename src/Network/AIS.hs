@@ -93,7 +93,7 @@ signExtendRightAlignedWord n x = fromIntegral (x `shiftL` s) `shiftR` s
 
 data AisMessage = ClassAPositionReport
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , navigationalStatus :: NavigationalStatus
                   , rateOfTurn :: PackedRateOfTurn
@@ -111,7 +111,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | SafetyRelatedMessage
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , sourceID :: MMSI
                   , sequenceNumber :: Maybe Word8
                   , addressee :: Addressee
@@ -120,7 +120,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | BinaryMessage
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , sourceID :: MMSI
                   , sequenceNumber :: Maybe Word8
                   , addressee :: Addressee
@@ -131,13 +131,13 @@ data AisMessage = ClassAPositionReport
                   }
                 | AcknowledgementMessage
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , sourceID :: MMSI
                   , acknowledgements :: [Acknowledgement]
                   }
                 | BaseStationReport
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , utcTime :: UTCTime
                   , positionAccuracy :: Bool
@@ -150,13 +150,13 @@ data AisMessage = ClassAPositionReport
                   }
                 | TimeInquiry
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , sourceID :: MMSI
                   , destinationID :: MMSI
                   }
                 | TimeResponse
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , utcTime :: UTCTime
                   , positionAccuracy :: Bool
@@ -169,7 +169,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | ClassAStaticData
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , aisVersionIndicator :: Word8
                   , imoNumber :: Word32
@@ -185,14 +185,14 @@ data AisMessage = ClassAPositionReport
                   }
                 | StaticDataReportPartA
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , partNumber :: Word8
                   , name :: Text
                   }
                 | StaticDataReportPartB
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , partNumber :: Word8
                   , typeOfShipAndCargo :: Word8
@@ -203,7 +203,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | AidToNavigationReport
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , aidID :: MMSI
                   , typeOfAid :: AidToNavigation
                   , name :: Text
@@ -222,25 +222,25 @@ data AisMessage = ClassAPositionReport
                   }
                 | InterrogationMessage
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , sourceID :: MMSI
                   , interrogations :: [Interrogation]
                   }
                 | DataLinkManagementMessage
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , sourceID :: MMSI
                   , reservations :: [Reservation]
                   }
                 | AssignmentModeCommand
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , sourceID :: MMSI
                   , assignments :: [Assignment]
                   }
                 | DgnssBroadcastMessage
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , sourceID :: MMSI
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
@@ -248,7 +248,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | SarAircraftPositionReport
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , altitude :: Altitude
                   , speedOverGround' :: VelocityKnots
@@ -266,7 +266,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | StandardClassBPositionReport
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , speedOverGround :: VelocityTenthsOfKnot
                   , positionAccuracy :: Bool
@@ -283,7 +283,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | ExtendedClassBPositionReport
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , speedOverGround :: VelocityTenthsOfKnot
                   , positionAccuracy :: Bool
@@ -303,7 +303,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | ChannelManagementCommand
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , channelA :: Channel
                   , channelB :: Channel
@@ -314,7 +314,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | GroupAssignmentCommand
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , region :: Region
                   , stationType :: StationType
@@ -325,7 +325,7 @@ data AisMessage = ClassAPositionReport
                   }
                 | LongRangePositionReport
                   { messageType :: MessageID
-                  , repeatIndicator :: Word8
+                  , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , positionAccuracy :: Bool
                   , raimFlag :: Bool
@@ -340,6 +340,9 @@ data AisMessage = ClassAPositionReport
 
 getMessageType :: BitGet MessageID
 getMessageType = toEnum . fromIntegral <$> getAsWord8 6
+
+getRepeatIndicator :: BitGet RepeatIndicator
+getRepeatIndicator = getAsWord8 2
 
 getNavigationalStatus :: BitGet NavigationalStatus
 getNavigationalStatus = toEnum . fromIntegral <$> getAsWord8 4
@@ -578,7 +581,7 @@ getMessage = do
 
 getClassAPositionReport :: MessageID -> BitGet CommunicationsState -> BitGet AisMessage
 getClassAPositionReport messageType getCommState = do
-                            repeatIndicator <- getAsWord8 2
+                            repeatIndicator <- getRepeatIndicator
                             userID <- getMMSI
                             navigationalStatus <- getNavigationalStatus
                             rateOfTurn <- getRateOfTurn
@@ -598,7 +601,7 @@ getClassAPositionReport messageType getCommState = do
 getSarAircraftPositionReport :: BitGet AisMessage
 getSarAircraftPositionReport = do
                                  let messageType = MStandardSarAircraftPositionReport
-                                 repeatIndicator <- getAsWord8 2
+                                 repeatIndicator <- getRepeatIndicator
                                  userID <- getMMSI
                                  altitude <- getAltitude
                                  speedOverGround' <- getSpeed 10
@@ -619,7 +622,7 @@ getSarAircraftPositionReport = do
 getAddressedSafetyRelatedMessage :: BitGet AisMessage
 getAddressedSafetyRelatedMessage = do
                                      let messageType = MAddressedSafetyRelatedMessage
-                                     repeatIndicator <- getAsWord8 2
+                                     repeatIndicator <- getRepeatIndicator
                                      sourceID <- getMMSI
                                      sequenceNumber <- Just <$> getAsWord8 2
                                      addressee <- Addressed <$> getMMSI
@@ -631,7 +634,7 @@ getAddressedSafetyRelatedMessage = do
 getSafetyRelatedBroadcastMessage :: BitGet AisMessage
 getSafetyRelatedBroadcastMessage = do
                                      let messageType = MSafetyRelatedBroadcastMessage
-                                     repeatIndicator <- getAsWord8 2
+                                     repeatIndicator <- getRepeatIndicator
                                      sourceID <- getMMSI
                                      skip 2
                                      safetyRelatedText <- getRemainingSixBitText
@@ -643,7 +646,7 @@ getSafetyRelatedBroadcastMessage = do
 getAddressedBinaryMessage :: BitGet AisMessage
 getAddressedBinaryMessage = do
                               let messageType = MBinaryAddressedMessage
-                              repeatIndicator <- getAsWord8 2
+                              repeatIndicator <- getRepeatIndicator
                               sourceID <- getMMSI
                               sequenceNumber <- Just <$> getAsWord8 2
                               addressee <- Addressed <$> getMMSI
@@ -660,7 +663,7 @@ getAddressedBinaryMessage = do
 getBinaryBroadcastMessage :: BitGet AisMessage
 getBinaryBroadcastMessage = do
                               let messageType = MBinaryBroadcastMessage
-                              repeatIndicator <- getAsWord8 2
+                              repeatIndicator <- getRepeatIndicator
                               sourceID <- getMMSI
                               skip 2
                               applicationIdentifier <- Just <$> getApplicationIdentifier
@@ -677,7 +680,7 @@ getBinaryBroadcastMessage = do
 getBaseStationReportMessage :: BitGet AisMessage
 getBaseStationReportMessage = do
                                 let messageType = MBaseStationReport
-                                repeatIndicator <- getAsWord8 2
+                                repeatIndicator <- getRepeatIndicator
                                 userID <- getMMSI
                                 year <- getAsWord16 14
                                 month <- getAsWord16 4
@@ -699,7 +702,7 @@ getBaseStationReportMessage = do
 getDataLinkManagementMessage :: BitGet AisMessage
 getDataLinkManagementMessage = do
                                  let messageType = MDataLinkManagementMessage
-                                 repeatIndicator <- getAsWord8 2
+                                 repeatIndicator <- getRepeatIndicator
                                  sourceID <- getMMSI
                                  skip 2
                                  r <- getReservation
@@ -712,7 +715,7 @@ getDataLinkManagementMessage = do
 getAssignmentModeCommand :: BitGet AisMessage
 getAssignmentModeCommand = do
                              let messageType = MAssignmentModeCommand
-                             repeatIndicator <- getAsWord8 2
+                             repeatIndicator <- getRepeatIndicator
                              sourceID <- getMMSI
                              skip 2
                              assignmentA <- getAssignment
@@ -730,7 +733,7 @@ getAssignmentModeCommand = do
 getInterrogationMessage :: BitGet AisMessage
 getInterrogationMessage = do
                             let messageType = MInterrogation
-                            repeatIndicator <- getAsWord8 2
+                            repeatIndicator <- getRepeatIndicator
                             sourceID <- getMMSI
                             skip 2
                             interrogations <- getInterrogations
@@ -769,7 +772,7 @@ getInterrogationMessage = do
 getTimeInquiry :: BitGet AisMessage
 getTimeInquiry = do
                    let messageType = MTimeInquiry
-                   repeatIndicator <- getAsWord8 2
+                   repeatIndicator <- getRepeatIndicator
                    sourceID <- getMMSI
                    skip 2
                    destinationID <- getMMSI
@@ -779,7 +782,7 @@ getTimeInquiry = do
 getTimeResponse :: BitGet AisMessage
 getTimeResponse = do
                     let messageType = MTimeResponse
-                    repeatIndicator <- getAsWord8 2
+                    repeatIndicator <- getRepeatIndicator
                     userID <- getMMSI
                     year <- getAsWord16 14
                     month <- getAsWord16 4
@@ -801,7 +804,7 @@ getTimeResponse = do
 getClassAStaticData :: BitGet AisMessage
 getClassAStaticData = do
                         let messageType = MStaticAndVoyageData
-                        repeatIndicator <- getAsWord8 2
+                        repeatIndicator <- getRepeatIndicator
                         userID <- getMMSI
                         aisVersionIndicator <- getAsWord8 2
                         imoNumber <- getAsWord32 30
@@ -820,7 +823,7 @@ getClassAStaticData = do
 getStaticDataReport :: BitGet AisMessage
 getStaticDataReport = do
                         let messageType = MStaticDataReport
-                        repeatIndicator <- getAsWord8 2
+                        repeatIndicator <- getRepeatIndicator
                         userID <- getMMSI
                         partNumber <- getAsWord8 2
                         case partNumber of
@@ -838,7 +841,7 @@ getStaticDataReport = do
 
 getAcknowledgementMessage :: MessageID -> BitGet AisMessage
 getAcknowledgementMessage messageType = do
-                                          repeatIndicator <- getAsWord8 2
+                                          repeatIndicator <- getRepeatIndicator
                                           sourceID <- getMMSI
                                           skip 2
                                           n <- remaining
@@ -848,7 +851,7 @@ getAcknowledgementMessage messageType = do
 getDgnssBroadcastMessage :: BitGet AisMessage
 getDgnssBroadcastMessage = do
                              let messageType = MDgnssBroadcastBinaryMessage
-                             repeatIndicator <- getAsWord8 2
+                             repeatIndicator <- getRepeatIndicator
                              sourceID <- getMMSI
                              skip 2
                              longitude <- getLowResolutionLongitude
@@ -861,7 +864,7 @@ getDgnssBroadcastMessage = do
 getChannelManagementCommand :: BitGet AisMessage
 getChannelManagementCommand = do
                                 let messageType = MChannelManagement
-                                repeatIndicator <- getAsWord8 2
+                                repeatIndicator <- getRepeatIndicator
                                 userID <- getMMSI
                                 skip 2
                                 channelA <- getChannel
@@ -877,7 +880,7 @@ getChannelManagementCommand = do
 getGroupAssignmentCommand :: BitGet AisMessage
 getGroupAssignmentCommand = do
                               let messageType = MGroupAssignmentCommand
-                              repeatIndicator <- getAsWord8 2
+                              repeatIndicator <- getRepeatIndicator
                               userID <- getMMSI
                               skip 2
                               region <- getRegion
@@ -893,7 +896,7 @@ getGroupAssignmentCommand = do
 getAidToNavigationReport :: BitGet AisMessage
 getAidToNavigationReport = do
                              let messageType = MAidToNavigationReport
-                             repeatIndicator <- getAsWord8 2
+                             repeatIndicator <- getRepeatIndicator
                              aidID <- getMMSI
                              typeOfAid <- getAidToNavigation
                              initialName <- getSixBitText 20
@@ -918,7 +921,7 @@ getAidToNavigationReport = do
 getStandardClassBPositionReport :: BitGet AisMessage
 getStandardClassBPositionReport = do
                                     let messageType = MStandardClassBPositionReport
-                                    repeatIndicator <- getAsWord8 2
+                                    repeatIndicator <- getRepeatIndicator
                                     userID <- getMMSI
                                     skip 8
                                     speedOverGround <- getSpeed 10
@@ -938,7 +941,7 @@ getStandardClassBPositionReport = do
 getExtendedClassBPositionReport :: BitGet AisMessage
 getExtendedClassBPositionReport = do
                                     let messageType = MExtendedClassBPositionReport
-                                    repeatIndicator <- getAsWord8 2
+                                    repeatIndicator <- getRepeatIndicator
                                     userID <- getMMSI
                                     skip 8
                                     speedOverGround <- getSpeed 10
@@ -962,7 +965,7 @@ getExtendedClassBPositionReport = do
 getSingleSlotBinaryMessage :: BitGet AisMessage
 getSingleSlotBinaryMessage = do
                                let messageType = MSingleSlotBinaryMessage
-                               repeatIndicator <- getAsWord8 2
+                               repeatIndicator <- getRepeatIndicator
                                sourceID <- getMMSI
                                isAddressed <- getBit
                                hasApplicationID <- getBit
@@ -982,7 +985,7 @@ getSingleSlotBinaryMessage = do
 getMultipleSlotBinaryMessage :: BitGet AisMessage
 getMultipleSlotBinaryMessage = do
                                  let messageType = MMultipleSlotBinaryMessage
-                                 repeatIndicator <- getAsWord8 2
+                                 repeatIndicator <- getRepeatIndicator
                                  sourceID <- getMMSI
                                  isAddressed <- getBit
                                  hasApplicationID <- getBit
@@ -1004,7 +1007,7 @@ getMultipleSlotBinaryMessage = do
 getLongRangePositionReport :: BitGet AisMessage
 getLongRangePositionReport = do
                                let messageType = MLongRangePositionReport
-                               repeatIndicator <- getAsWord8 2
+                               repeatIndicator <- getRepeatIndicator
                                userID <- getMMSI
                                positionAccuracy <- getBit
                                raimFlag <- getBit
