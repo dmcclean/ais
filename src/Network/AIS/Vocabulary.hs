@@ -10,6 +10,7 @@ where
 import qualified Data.ExactPi.TypeLevel as E
 import Data.Int
 import Data.Word
+import qualified Numeric.IEEE
 import Numeric.Units.Dimensional.FixedPoint
 import Numeric.Units.Dimensional.Quantities
 import Numeric.Units.Dimensional.SIUnits
@@ -311,7 +312,20 @@ unpackRateOfTurn (RateSpecified r) = RateSpecified r''
   where
     s = (realToFrac $ signum r) D.*~ (degree / minute)
     r' = (realToFrac r P./ 4.733) P.** 2 D.*~ (degree / minute)
-    r'' = copySign s r'
+    r'' = copySign r' s
+
+packRateOfTurn :: UnpackedRateOfTurn -> PackedRateOfTurn
+packRateOfTurn RateNotAvailable = RateNotAvailable
+packRateOfTurn RateStarboardNoSensor = RateStarboardNoSensor
+packRateOfTurn RatePortNoSensor = RatePortNoSensor
+packRateOfTurn (RateSpecified r) = RateSpecified r''''
+  where
+    dpm = r D./~ (degree / minute)
+    s = signum dpm
+    r' = 4.733 P.* P.sqrt (P.abs dpm)
+    r'' = Numeric.IEEE.copySign r' s
+    r''' = round r'' :: Int
+    r'''' = fromIntegral $ max (-126) $ min 126 r'''
 
 instance Show PackedRateOfTurn where
   showsPrec _ RateNotAvailable = showString "RateNotAvailable"
