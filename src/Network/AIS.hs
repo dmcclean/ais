@@ -27,8 +27,11 @@ sixBitCharacters = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^- !\"#$%&`()*+,-./0123456789
 -- | Gets a 6-bit character string whose length is specified in characters.
 getSixBitText :: Int -> BitGet Text
 getSixBitText n = do
-                    cs <- replicateM n $ fmap (T.index sixBitCharacters . fromIntegral) $ getAsWord8 6
+                    cs <- replicateM n getSixBitChar
                     return $ T.pack cs
+
+getSixBitChar :: BitGet Char
+getSixBitChar = T.index sixBitCharacters . fromIntegral <$> getAsWord8 6
 
 getRemainingSixBitText :: BitGet Text
 getRemainingSixBitText = do
