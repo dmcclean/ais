@@ -841,11 +841,8 @@ getAcknowledgementMessage messageType = do
                                           sourceID <- getMMSI
                                           skip 2
                                           n <- remaining
-                                          if (n `mod` 32 == 0)
-                                            then do
-                                                   acknowledgements <- replicateM (n `div` 32) getAcknowledgement
-                                                   return $ AcknowledgementMessage { .. }
-                                            else error "Acknowledgement message contained partial acknowledgements of incorrect length."
+                                          acknowledgements <- replicateM (n `div` 32) getAcknowledgement
+                                          return $ AcknowledgementMessage { .. }
 
 getDgnssBroadcastMessage :: BitGet AisMessage
 getDgnssBroadcastMessage = do
