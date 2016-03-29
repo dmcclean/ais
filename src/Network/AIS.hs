@@ -345,7 +345,7 @@ getReservation :: BitGet Reservation
 getReservation = do
                    reservedOffsetNumber <- getAsWord16 12
                    reservedNumberOfSlots <- getAsWord8 4
-                   reservationTimeoutMinutes <- getAsWord8 3
+                   reservationTimeout <- coerce <$> getAsWord8 3
                    reservationIncrement <- getAsWord16 11
                    return $ Reservation { .. }
 
