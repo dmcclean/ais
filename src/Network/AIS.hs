@@ -57,7 +57,7 @@ getLowResolutionLatitude :: BitGet (Maybe Latitude)
 getLowResolutionLatitude = fmap f $ getAsInt32 17
   where
     f x | -108000 <= x && x <= 108000 = Just $ coerce (x * 1000)
-        | otherwise                 = Nothing
+        | otherwise                   = Nothing
 
 getSpeed :: Int -> BitGet (Speed s Word16)
 getSpeed n = do
@@ -70,16 +70,16 @@ getSpeed n = do
                           _ -> SpeedSpecified $ coerce x
 
 getAsInt8 :: Int -> BitGet Int8
-getAsInt8 n = fmap (signExtendRightAlignedWord n) (getAsWord8 n)
+getAsInt8 n = signExtendRightAlignedWord n <$> getAsWord8 n
 
 getAsInt16 :: Int -> BitGet Int16
-getAsInt16 n = fmap (signExtendRightAlignedWord n) (getAsWord16 n)
+getAsInt16 n = signExtendRightAlignedWord n <$> getAsWord16 n
 
 getAsInt32 :: Int -> BitGet Int32
-getAsInt32 n = fmap (signExtendRightAlignedWord n) (getAsWord32 n)
+getAsInt32 n = signExtendRightAlignedWord n <$> getAsWord32 n
 
 getAsInt64 :: Int -> BitGet Int64
-getAsInt64 n = fmap (signExtendRightAlignedWord n) (getAsWord64 n)
+getAsInt64 n = signExtendRightAlignedWord n <$> getAsWord64 n
 
 -- Assumes but does not verify that a and b have the same finite size.
 signExtendRightAlignedWord :: (FiniteBits a, FiniteBits b, Integral a, Integral b) => Int -> a -> b
@@ -336,10 +336,10 @@ data AisMessage = ClassAPositionReport
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
-getMessageType = fmap (toEnum . fromIntegral) $ getAsWord8 6
+getMessageType = toEnum . fromIntegral <$> getAsWord8 6
 
 getNavigationalStatus :: BitGet NavigationalStatus
-getNavigationalStatus = fmap (toEnum . fromIntegral) $ getAsWord8 4
+getNavigationalStatus = toEnum . fromIntegral <$> getAsWord8 4
 
 getReservation :: BitGet Reservation
 getReservation = do
@@ -367,13 +367,13 @@ getTimeStamp = do
                             _  -> (Just n,  PosStatusNormal)
 
 getMMSI :: BitGet MMSI
-getMMSI = fmap MMSI $ getAsWord32 30
+getMMSI = MMSI <$> getAsWord32 30
 
 getSyncState :: BitGet SyncState
-getSyncState = fmap (toEnum . fromIntegral) $ getAsWord8 2
+getSyncState = toEnum . fromIntegral <$> getAsWord8 2
 
 getAidToNavigation :: BitGet AidToNavigation
-getAidToNavigation = fmap (toEnum . fromIntegral) $ getAsWord8 5
+getAidToNavigation = toEnum . fromIntegral <$> getAsWord8 5
 
 getApplicationIdentifier :: BitGet ApplicationIdentifier
 getApplicationIdentifier = do
@@ -389,16 +389,14 @@ getAcknowledgement = do
 
 getVesselDimensions :: BitGet VesselDimensions
 getVesselDimensions = do
-                        forwardOfReferencePoint <- fmap coerce $ getAsWord16 9
-                        aftOfReferencePoint <- fmap coerce $ getAsWord16 9
-                        portOfReferencePoint <- fmap coerce $ getAsWord8 6
-                        starboardOfReferencePoint <- fmap coerce $ getAsWord8 6
+                        forwardOfReferencePoint   <- coerce <$> getAsWord16 9
+                        aftOfReferencePoint       <- coerce <$> getAsWord16 9
+                        portOfReferencePoint      <- coerce <$> getAsWord8 6
+                        starboardOfReferencePoint <- coerce <$> getAsWord8 6
                         return $ VesselDimensions { .. }
 
 getTransitionalZoneSize :: BitGet (LengthNauticalMiles Word8)
-getTransitionalZoneSize = do
-                            n <- getAsWord8 3
-                            return . coerce $ n + 1
+getTransitionalZoneSize = coerce . (+ 1) <$> getAsWord8 3
 
 getRateOfTurn :: BitGet PackedRateOfTurn
 getRateOfTurn = do
@@ -442,7 +440,7 @@ getAltitudeSensor :: BitGet AltitudeSensor
 getAltitudeSensor = fmap (\x -> if x then AltBarometric else AltGnss) getBit
 
 getPositionFixingDevice :: BitGet PositionFixingDevice
-getPositionFixingDevice = fmap (f . fromIntegral) $ getAsWord8 4
+getPositionFixingDevice = f . fromIntegral <$> getAsWord8 4
   where
     f 15 = PosFixInternalGnss
     f n = toEnum n
@@ -456,7 +454,7 @@ getStationType = do
                               else StationsReserved
 
 getTransmissionMode :: Int -> BitGet TransmissionMode
-getTransmissionMode n = fmap (f . fromIntegral) $ getAsWord8 n
+getTransmissionMode n = f . fromIntegral <$> getAsWord8 n
   where
     f :: Int -> TransmissionMode
     f 0 = TransmitAB
@@ -465,7 +463,7 @@ getTransmissionMode n = fmap (f . fromIntegral) $ getAsWord8 n
     f _ = TransmitReserved
 
 getAssignedReportingInterval :: BitGet AssignedReportingInterval
-getAssignedReportingInterval = fmap (f . fromIntegral) $ getAsWord8 4
+getAssignedReportingInterval = f . fromIntegral <$> getAsWord8 4
   where
     f n = if n >= 12
             then IntervalReserved
@@ -636,8 +634,8 @@ getAddressedSafetyRelatedMessage = do
                                      let messageType = MAddressedSafetyRelatedMessage
                                      repeatIndicator <- getAsWord8 2
                                      sourceID <- getMMSI
-                                     sequenceNumber <- fmap Just $ getAsWord8 2
-                                     addressee <- fmap Addressed getMMSI
+                                     sequenceNumber <- Just <$> getAsWord8 2
+                                     addressee <- Addressed <$> getMMSI
                                      retransmitFlag <- getBit
                                      skip 1
                                      safetyRelatedText <- getRemainingSixBitText
@@ -660,11 +658,11 @@ getAddressedBinaryMessage = do
                               let messageType = MBinaryAddressedMessage
                               repeatIndicator <- getAsWord8 2
                               sourceID <- getMMSI
-                              sequenceNumber <- fmap Just $ getAsWord8 2
-                              addressee <- fmap Addressed getMMSI
+                              sequenceNumber <- Just <$> getAsWord8 2
+                              addressee <- Addressed <$> getMMSI
                               retransmitFlag <- getBit
                               skip 1
-                              applicationIdentifier <- fmap Just getApplicationIdentifier
+                              applicationIdentifier <- Just <$> getApplicationIdentifier
                               n <- remaining
                               payload <- getLeftByteString n
                               let optionalCommunicationsState = Nothing
@@ -678,7 +676,7 @@ getBinaryBroadcastMessage = do
                               repeatIndicator <- getAsWord8 2
                               sourceID <- getMMSI
                               skip 2
-                              applicationIdentifier <- fmap Just getApplicationIdentifier
+                              applicationIdentifier <- Just <$> getApplicationIdentifier
                               n <- remaining
                               payload <- getLeftByteString n
                               let addressee = Broadcast
@@ -718,7 +716,7 @@ getDataLinkManagementMessage = do
                                  sourceID <- getMMSI
                                  skip 2
                                  r <- getReservation
-                                 (n, s) <- fmap (`divMod` 30) remaining
+                                 (n, s) <- (`divMod` 30) <$> remaining
                                  rs <- replicateM n getReservation
                                  skip s
                                  let reservations = Prelude.filter isValidReservation (r:rs)
@@ -985,10 +983,10 @@ getSingleSlotBinaryMessage = do
                                isAddressed <- getBit
                                hasApplicationID <- getBit
                                addressee <- if isAddressed
-                                              then fmap Addressed getMMSI <* skip 2
+                                              then Addressed <$> getMMSI <* skip 2
                                               else return Broadcast
                                applicationIdentifier <- if hasApplicationID
-                                                          then fmap Just getApplicationIdentifier
+                                                          then Just <$> getApplicationIdentifier
                                                           else return Nothing
                                n <- remaining
                                payload <- getLeftByteString n
@@ -1005,10 +1003,10 @@ getMultipleSlotBinaryMessage = do
                                  isAddressed <- getBit
                                  hasApplicationID <- getBit
                                  addressee <- if isAddressed
-                                                then fmap Addressed getMMSI <* skip 2
+                                                then Addressed <$> getMMSI <* skip 2
                                                 else return Broadcast
                                  applicationIdentifier <- if hasApplicationID
-                                                          then fmap Just getApplicationIdentifier
+                                                          then Just <$> getApplicationIdentifier
                                                           else return Nothing
                                  n <- remaining
                                  payload <- getLeftByteString (n - 24)
