@@ -6,7 +6,7 @@ module Network.AIS.NMEA
   parseAis
 , parseAisMessagePackedInNmeaMessage
 , translateChar
-, AisNmeaMessage(..)
+, AisMessageFragment(..)
 )
 where
 
@@ -17,24 +17,24 @@ import Data.Char
 import Data.Text as T
 import Data.Binary.BitPut
 
-data AisNmeaMessage = AisNmeaMessage 
+data AisMessageFragment = AisMessageFragment 
                     { fragments :: Int
                     , fragmentNumber :: Int
                     , messageID :: Int
                     , channelCode :: Char
-                    , payload :: ByteString
+                    , payloadFragment :: ByteString
                     , fillBits :: Int  
                     }
   deriving (Eq, Show)
 
-parseAis :: Text -> AisNmeaMessage
+parseAis :: Text -> AisMessageFragment
 parseAis input = let (Right output) = parseAisMessagePackedInNmeaMessage input
                   in output
 
-parseAisMessagePackedInNmeaMessage :: Text -> Either String AisNmeaMessage
+parseAisMessagePackedInNmeaMessage :: Text -> Either String AisMessageFragment
 parseAisMessagePackedInNmeaMessage = parseOnly (aisMessage <* endOfInput)
 
-aisMessage :: Parser AisNmeaMessage
+aisMessage :: Parser AisMessageFragment
 aisMessage = do
                _ <- char '!'
                _ <- string "AIVDM"
@@ -53,8 +53,8 @@ aisMessage = do
                _ <- char '*'
                _ <- anyChar
                _ <- anyChar
-               let payload = translate rawPayload fillBits
-               return $ AisNmeaMessage { .. }
+               let payloadFragment = translate rawPayload fillBits
+               return $ AisMessageFragment { .. }
 
 translate :: [Char] -> Int -> ByteString
 translate cs n = toStrict $ runBitPut $ putThem cs
