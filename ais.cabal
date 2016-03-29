@@ -27,6 +27,7 @@ library
                        binary,
                        binary-strict,
                        bytestring,
+                       base16-bytestring,
                        dimensional >= 1.0.1.1,
                        exact-pi,
                        text,
