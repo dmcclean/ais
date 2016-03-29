@@ -6,6 +6,7 @@ module Network.AIS.NMEA
   parseAis
 , parseAisMessagePackedInNmeaMessage
 , translateChar
+, AisNmeaMessage(..)
 )
 where
 
@@ -24,6 +25,7 @@ data AisNmeaMessage = AisNmeaMessage
                     , payload :: ByteString
                     , fillBits :: Int  
                     }
+  deriving (Eq, Show)
 
 parseAis :: Text -> AisNmeaMessage
 parseAis input = let (Right output) = parseAisMessagePackedInNmeaMessage input
