@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Network.AIS.NMEA
 (
@@ -15,14 +16,23 @@ import Data.Char
 import Data.Text as T
 import Data.Binary.BitPut
 
-parseAis :: Text -> (ByteString, Int)
+data AisNmeaMessage = AisNmeaMessage 
+                    { fragments :: Int
+                    , fragmentNumber :: Int
+                    , messageID :: Int
+                    , channelCode :: Char
+                    , payload :: ByteString
+                    , fillBits :: Int  
+                    }
+
+parseAis :: Text -> AisNmeaMessage
 parseAis input = let (Right output) = parseAisMessagePackedInNmeaMessage input
                   in output
 
-parseAisMessagePackedInNmeaMessage :: Text -> Either String (ByteString, Int)
+parseAisMessagePackedInNmeaMessage :: Text -> Either String AisNmeaMessage
 parseAisMessagePackedInNmeaMessage = parseOnly (aisMessage <* endOfInput)
 
-aisMessage :: Parser (ByteString, Int)
+aisMessage :: Parser AisNmeaMessage
 aisMessage = do
                _ <- char '!'
                _ <- string "AIVDM"
@@ -35,16 +45,14 @@ aisMessage = do
                _ <- char ','
                channelCode <- anyChar
                _ <- char ','
-               payload <- many' $ satisfy (inClass "0-9A-Wa-w:;<=>?@`")
+               rawPayload <- many' $ satisfy (inClass "0-9A-Wa-w:;<=>?@`")
                _ <- char ','
                fillBits <- decimal
                _ <- char '*'
                _ <- anyChar
                _ <- anyChar
-               let result = translate payload fillBits
-               let valid = (((6 * Prelude.length payload) - fillBits) - (8 * (Data.ByteString.length result - 1))) `mod` 8
-
-               return (result, valid)
+               let payload = translate rawPayload fillBits
+               return $ AisNmeaMessage { .. }
 
 translate :: [Char] -> Int -> ByteString
 translate cs n = toStrict $ runBitPut $ putThem cs
