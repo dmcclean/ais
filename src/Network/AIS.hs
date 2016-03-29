@@ -70,17 +70,17 @@ getSpeed n = do
                              | x' == h -> SpeedHigh
                           _ -> SpeedSpecified $ coerce x
 
-getAsInt8 :: Int -> BitGet Int8
-getAsInt8 n = signExtendRightAlignedWord n <$> getAsWord8 n
+--getAsInt8 :: Int -> BitGet Int8
+--getAsInt8 n = signExtendRightAlignedWord n <$> getAsWord8 n
 
-getAsInt16 :: Int -> BitGet Int16
-getAsInt16 n = signExtendRightAlignedWord n <$> getAsWord16 n
+--getAsInt16 :: Int -> BitGet Int16
+--getAsInt16 n = signExtendRightAlignedWord n <$> getAsWord16 n
 
 getAsInt32 :: Int -> BitGet Int32
 getAsInt32 n = signExtendRightAlignedWord n <$> getAsWord32 n
 
-getAsInt64 :: Int -> BitGet Int64
-getAsInt64 n = signExtendRightAlignedWord n <$> getAsWord64 n
+--getAsInt64 :: Int -> BitGet Int64
+--getAsInt64 n = signExtendRightAlignedWord n <$> getAsWord64 n
 
 -- Assumes but does not verify that a and b have the same finite size.
 signExtendRightAlignedWord :: (FiniteBits a, FiniteBits b, Integral a, Integral b) => Int -> a -> b
@@ -334,6 +334,7 @@ data AisMessage = ClassAPositionReport
                   , courseOverGround :: Maybe Course
                   , positionLatency :: Bool
                   }
+                | InvalidMessage
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
@@ -548,7 +549,7 @@ getMessage :: BitGet AisMessage
 getMessage = do
                messageType <- getMessageType
                case messageType of
-                 MNone -> undefined
+                 MNone -> return InvalidMessage
         {-  1 -} MScheduledClassAPositionReport -> getClassAPositionReport MScheduledClassAPositionReport getSOTDMACommunicationsState
         {-  2 -} MAssignedScheduledClassAPositionReport -> getClassAPositionReport MAssignedScheduledClassAPositionReport getSOTDMACommunicationsState
         {-  3 -} MSpecialClassAPositionReport -> getClassAPositionReport MSpecialClassAPositionReport getITDMACommunicationsState
@@ -836,6 +837,7 @@ getStaticDataReport = do
                                  positionFixingDevice <- getPositionFixingDevice
                                  skip 2
                                  return $ StaticDataReportPartB { .. }
+                          _ -> return InvalidMessage
 
 getAcknowledgementMessage :: MessageID -> BitGet AisMessage
 getAcknowledgementMessage messageType = do
