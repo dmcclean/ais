@@ -103,7 +103,7 @@ data AisMessage = ClassAPositionReport
                   , trueHeading :: Maybe Heading
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
-                  , manueverIndicator :: Word8
+                  , maneuverIndicator :: SpecialManeuverIndicator
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
                   }
@@ -386,6 +386,9 @@ getSyncState = toEnum . fromIntegral <$> getAsWord8 2
 getAidToNavigation :: BitGet AidToNavigation
 getAidToNavigation = toEnum . fromIntegral <$> getAsWord8 5
 
+getSpecialManeuverIndicator :: BitGet SpecialManeuverIndicator
+getSpecialManeuverIndicator = toEnum . fromIntegral <$> getAsWord8 2
+
 getApplicationIdentifier :: BitGet ApplicationIdentifier
 getApplicationIdentifier = do
                              designatedAreaCode <- getAsWord16 10
@@ -593,7 +596,7 @@ getClassAPositionReport messageType getCommState = do
                             courseOverGround <- getCourse
                             trueHeading <- getHeading
                             (timeStamp, positionFixingStatus) <- getTimeStamp
-                            manueverIndicator <- getAsWord8 2
+                            maneuverIndicator <- getSpecialManeuverIndicator
                             skip 3
                             raimFlag <- getBit
                             communicationsState <- getCommState

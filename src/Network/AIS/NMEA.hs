@@ -6,6 +6,7 @@ module Network.AIS.NMEA
   parseAis
 , parseAisMessagePackedInNmeaMessage
 , translateChar
+, aisMessage
 , AisMessageFragment(..)
 )
 where
@@ -21,7 +22,7 @@ data AisMessageFragment = AisMessageFragment
                     { fragments :: Int
                     , fragmentNumber :: Int
                     , messageID :: Int
-                    , channelCode :: Char
+                    , channelCode :: Maybe Char
                     , payloadFragment :: ByteString
                     , fillBits :: Int  
                     }
@@ -45,7 +46,7 @@ aisMessage = do
                _ <- char ','
                messageID <- option 0 decimal
                _ <- char ','
-               channelCode <- anyChar
+               channelCode <- option Nothing $ Just <$> satisfy (inClass "0-9A-Za-Z")
                _ <- char ','
                rawPayload <- many' $ satisfy (inClass "0-9A-Wa-w:;<=>?@`")
                _ <- char ','
@@ -53,6 +54,7 @@ aisMessage = do
                _ <- char '*'
                _ <- anyChar
                _ <- anyChar
+               skipWhile (not . (== '\r')) >> char '\r'
                let payloadFragment = translate rawPayload fillBits
                return $ AisMessageFragment { .. }
 

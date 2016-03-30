@@ -28,10 +28,14 @@ library
                        binary-strict,
                        bytestring,
                        base16-bytestring,
+                       conduit,
+                       conduit-extra,
                        dimensional >= 1.0.1.1,
                        exact-pi,
                        ieee754,
+                       resourcet,
                        text,
+                       mtl,
                        time
   hs-source-dirs:      src
   default-language:    Haskell2010

@@ -73,8 +73,8 @@ data SyncState = SyncUtcDirect -- ^ The station is synchronized directly to UTC.
 data NavigationalStatus = NavUnderWayEngine -- ^ The vessel is under way using an engine.
                         | NavAtAnchor -- ^ The vessel is at anchor.
                         | NavNotUnderCommand -- ^ The vessel is not under command.
-                        | NavRestrictedManueverability -- ^ The vessel is operating with restricted manueverability.
-                        | NavConstrainedByDraught -- ^ The vessel's manueverability is constrained by its draught.
+                        | NavRestrictedManeuverability -- ^ The vessel is operating with restricted maneuverability.
+                        | NavConstrainedByDraught -- ^ The vessel's maneuverability is constrained by its draught.
                         | NavMoored -- ^ The vessel is moored.
                         | NavAground -- ^ The vessel is aground.
                         | NavEngagedInFishing -- ^ The vessel is engaged in fishing.
@@ -228,6 +228,12 @@ data StationType = StationsAllMobile -- ^ All mobile stations.
                  | StationsRegionalUseB
                  | StationsRegionalUseC
                  | StationsReserved
+  deriving (Eq, Enum, Read, Show)
+
+data SpecialManeuverIndicator = SpecialManeuverNotAvailable
+                              | NotEngagedInSpecialManeuver
+                              | EngagedInSpecialManeuver
+                              | SpecialManeuverReserved
   deriving (Eq, Enum, Read, Show)
 
 -- | A transmission mode controlling channel use by an AIS station.
