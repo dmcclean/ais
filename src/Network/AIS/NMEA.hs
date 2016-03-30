@@ -18,12 +18,13 @@ import Data.ByteString.Lazy (toStrict)
 import Data.Char
 import Data.Text as T
 import Data.Binary.BitPut
+import Network.AIS.Vocabulary (Channel(..))
 
 data AisMessageFragment = AisMessageFragment 
                     { fragments :: Int
                     , fragmentNumber :: Int
                     , messageID :: Int
-                    , channelCode :: Maybe Char
+                    , channelCode :: Maybe Channel
                     , payloadFragment :: ByteString
                     , fillBits :: Int  
                     }
@@ -47,7 +48,7 @@ aisMessage = do
                _ <- char ','
                messageID <- option 0 decimal
                _ <- char ','
-               channelCode <- option Nothing $ Just <$> satisfy (inClass "0-9A-Za-Z")
+               channelCode <- option Nothing $ parseChannel <$> satisfy (inClass "0-9A-Za-z")
                _ <- char ','
                rawPayload <- many' $ satisfy (inClass "0-9A-Wa-w:;<=>?@`")
                _ <- char ','
@@ -58,6 +59,15 @@ aisMessage = do
                skipWhile (not . (== '\r')) >> char '\r'
                let payloadFragment = translate rawPayload fillBits
                return $ AisMessageFragment { .. }
+
+parseChannel :: Char -> Maybe Channel
+parseChannel 'A' = Just AisChannelA
+parseChannel 'a' = Just AisChannelA
+parseChannel '1' = Just AisChannelA
+parseChannel 'B' = Just AisChannelB
+parseChannel 'b' = Just AisChannelB
+parseChannel '2' = Just AisChannelB
+parseChannel _ = Nothing
 
 translate :: [Char] -> Int -> ByteString
 translate cs n = toStrict $ runBitPut $ putThem cs

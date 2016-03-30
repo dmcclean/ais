@@ -32,6 +32,12 @@ instance Show MMSI where
 
 type RepeatIndicator = Word8
 
+data Channel = AisChannelA
+             | AisChannelB
+             | ItuRM1084Channel Word16 -- ^ A radio channel number of 25 kHz simplex, or simplex use of 25 kHz duplex,
+                                       -- in accordance with <https://www.itu.int/rec/R-REC-M.1084/en Recommendation ITU-R M.1084>.
+  deriving (Eq, Show, Read)
+
 data MessageID = MNone
                | MScheduledClassAPositionReport
                | MAssignedScheduledClassAPositionReport
@@ -249,10 +255,6 @@ data Assignment = Assignment { targetID :: MMSI
                              }
   deriving (Eq, Show)
 
--- | A radio channel number of 25 kHz simplex, or simplex use of 25 kHz duplex,
--- in accordance with <https://www.itu.int/rec/R-REC-M.1084/en Recommendation ITU-R M.1084>.
-type Channel = Word16
-
 data TargetDesignation = GeographicTargetDesignation Region
                        | AddressedTargetDesignation [MMSI]
   deriving (Eq, Show)
@@ -360,17 +362,17 @@ type TimeMinutes a = SQuantity (E.ExactNatural 60) DTime a
 
 type LengthDecimeters a = SQuantity (E.One E./ E.ExactNatural 10) DLength a
 
-data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: LengthDecimeters Word16
-                                         , aftOfReferencePoint :: LengthDecimeters Word16
-                                         , portOfReferencePoint :: LengthDecimeters Word8
-                                         , starboardOfReferencePoint :: LengthDecimeters Word8
+data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: Length Word16
+                                         , aftOfReferencePoint :: Length Word16
+                                         , portOfReferencePoint :: Length Word8
+                                         , starboardOfReferencePoint :: Length Word8
                                          }
   deriving (Eq, Show)
 
-overallLength :: VesselDimensions -> LengthDecimeters Word16
+overallLength :: VesselDimensions -> Length Word16
 overallLength dims = forwardOfReferencePoint dims + aftOfReferencePoint dims
 
-overallBeam :: VesselDimensions -> LengthDecimeters Word8
+overallBeam :: VesselDimensions -> Length Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
 
 data ClassBCapabilities = ClassBCapabilities { carrierSenseUnit :: Bool
