@@ -321,6 +321,12 @@ data AisMessage = ClassAPositionReport
                   , reportingInterval :: AssignedReportingInterval
                   , quietTime :: TimeMinutes Word8
                   }
+                | BaseStationCoverageAreaMessage
+                  { messageType :: MessageID
+                  , repeatIndicator :: RepeatIndicator
+                  , userID :: MMSI
+                  , region :: Region
+                  }
                 | LongRangePositionReport
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
@@ -451,13 +457,9 @@ getPositionFixingDevice = f . fromIntegral <$> getAsWord8 4
     f n | 9 <= n && n <= 14 = PosFixReserved
         | otherwise         = toEnum n
 
-getStationType :: BitGet StationType
-getStationType = do
-                   n <- getAsWord8 4
-                   let n' = fromIntegral n :: Int
-                   return $ if n' <= 10
-                              then toEnum n'
-                              else StationsReserved
+toStationType :: Word8 -> StationType
+toStationType n | n <= 9    = toEnum . fromIntegral $ n
+                | otherwise = StationsReserved
 
 getTransmissionMode :: Int -> BitGet TransmissionMode
 getTransmissionMode n = f . fromIntegral <$> getAsWord8 n
@@ -877,6 +879,7 @@ getChannelManagementCommand = do
                                 skip 23
                                 return $ ChannelManagementCommand { .. }
 
+-- The result may instead be a BaseStationCoverageAreaMessage under certain conditions.
 getGroupAssignmentCommand :: BitGet AisMessage
 getGroupAssignmentCommand = do
                               let messageType = MGroupAssignmentCommand
@@ -884,14 +887,17 @@ getGroupAssignmentCommand = do
                               userID <- getMMSI
                               skip 2
                               region <- getRegion
-                              stationType <- getStationType
+                              rawStationType <- getAsWord8 4
                               typeOfShipAndCargo <- getAsWord8 8
                               skip 22
                               transmissionMode <- getTransmissionMode 2
                               reportingInterval <- getAssignedReportingInterval
                               quietTime <- fmap coerce $ getAsWord8 4
                               skip 6
-                              return $ GroupAssignmentCommand { .. }
+                              return $ if rawStationType == 10
+                                         then BaseStationCoverageAreaMessage { .. }
+                                         else let stationType = toStationType rawStationType
+                                               in GroupAssignmentCommand { .. }
 
 getAidToNavigationReport :: BitGet AisMessage
 getAidToNavigationReport = do

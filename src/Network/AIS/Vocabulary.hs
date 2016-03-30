@@ -216,17 +216,17 @@ data Reservation = Reservation { reservedOffsetNumber :: Word16
 isValidReservation :: Reservation -> Bool
 isValidReservation r = reservationTimeout r > _0 && reservedNumberOfSlots r > 0
 
-data StationType = StationsAllMobile
-                 | StationsClassAMobile
-                 | StationsClassBMobile
-                 | StationsSarAirborneMobile
-                 | StationsClassBSelfOrganizingMobile
-                 | StationsClassBCarrierSenseMobile
-                 | StationsInlandWaterways
+-- | A classification of AIS stations.
+data StationType = StationsAllMobile -- ^ All mobile stations.
+                 | StationsClassAMobile -- ^ All mobile Class A stations.
+                 | StationsClassBMobile -- ^ All mobile Class B stations.
+                 | StationsSarAirborneMobile -- ^ All mobile airborne search and rescue stations.
+                 | StationsClassBSelfOrganizingMobile -- ^ All mobile Class B stations with SOTDMA operating capability.
+                 | StationsClassBCarrierSenseMobile -- ^ All mobile Class B stations limited to CSTDMA operating capability.
+                 | StationsInlandWaterways -- ^ All AIS stations operating on inland waterways.
                  | StationsRegionalUseA
                  | StationsRegionalUseB
                  | StationsRegionalUseC
-                 | StationsBaseStationCoverageArea
                  | StationsReserved
   deriving (Eq, Enum, Read, Show)
 
