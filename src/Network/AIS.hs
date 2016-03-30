@@ -4,8 +4,9 @@
 
 module Network.AIS
 (
-  AisMessage
+  AisMessage(..)
 , getMessage
+, isPositionReport
 , example
 )
 where
@@ -342,6 +343,13 @@ data AisMessage = ClassAPositionReport
                   }
                 | InvalidMessage
   deriving (Eq, Show)
+
+isPositionReport :: AisMessage -> Bool
+isPositionReport (ClassAPositionReport { .. }) = True
+isPositionReport (StandardClassBPositionReport { .. }) = True
+isPositionReport (ExtendedClassBPositionReport { .. }) = True
+isPositionReport (SarAircraftPositionReport { .. }) = True
+isPositionReport _ = False
 
 getMessageType :: BitGet MessageID
 getMessageType = f . fromIntegral <$> getAsWord8 6

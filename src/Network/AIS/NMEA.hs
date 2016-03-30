@@ -7,12 +7,13 @@ module Network.AIS.NMEA
 , parseAisMessagePackedInNmeaMessage
 , translateChar
 , aisMessage
+, merge
 , AisMessageFragment(..)
 )
 where
 
 import Data.Attoparsec.Text
-import Data.ByteString
+import Data.ByteString as BS
 import Data.ByteString.Lazy (toStrict)
 import Data.Char
 import Data.Text as T
@@ -65,6 +66,15 @@ translate cs n = toStrict $ runBitPut $ putThem cs
     putThem (x:[]) = putNBits (6 - n) (translateChar x)
     putThem (x:xs) = putNBits 6 (translateChar x) >> putThem xs
 
+merge :: [AisMessageFragment] -> ByteString
+merge [] = BS.empty
+merge [f] = payloadFragment f
+merge fs = toStrict $ runBitPut $ mapM_ put fs
+  where
+    put f = putLeftByteString (p, v)
+      where
+        p = payloadFragment f
+        v = 8 - fillBits f
 
 translateChar :: Char -> Int
 translateChar c | c' > 88 = fromIntegral (c' - 56)
