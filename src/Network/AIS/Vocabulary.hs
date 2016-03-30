@@ -369,9 +369,11 @@ data VesselDimensions = VesselDimensions { forwardOfReferencePoint :: Length Wor
                                          }
   deriving (Eq, Show)
 
+-- | Gets the overall length of a vessel from its 'VesselDimensions'.
 overallLength :: VesselDimensions -> Length Word16
 overallLength dims = forwardOfReferencePoint dims + aftOfReferencePoint dims
 
+-- | Gets the overall beam (width) of a vessel from its 'VesselDimensions'.
 overallBeam :: VesselDimensions -> Length Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
 

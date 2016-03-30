@@ -177,7 +177,7 @@ data AisMessage = ClassAPositionReport
                   , typeOfShipAndCargo :: Word8
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
-                  , eta :: Word32
+                  , eta :: Word32 -- TODO: improve type of this field, which is month / day / hour / minute
                   , draught :: LengthDecimeters Word8
                   , destination :: Text
                   , dteNotReady :: Bool
