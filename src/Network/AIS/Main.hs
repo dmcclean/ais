@@ -15,11 +15,12 @@ main :: IO ()
 main = do
          let path = "C:\\Users\\Doug\\Downloads\\nmea-sample\\nmea-sample.txt"
          let source = sourceFile path
-         let cond = decode utf8 =$= Data.Conduit.Text.lines =$= conduitParser aisMessage =$= CL.map (f . snd)
+         let cond = decode utf8 =$= Data.Conduit.Text.lines =$= CL.isolate 10000 =$= conduitParser aisMessage =$= CL.map (f . snd)
          let sink = transPipe lift $ CL.mapM_ (\x -> do 
                                                        putStrLn x
-                                                       _ <- getLine
+                                                       --_ <- getLine
                                                        return ())
+         --let sink2 = CL.map T.pack =$= encode utf8 =$ sinkFile "C:\\Users\\Doug\\Downloads\\nmea-sample\\decoded.txt"
          runResourceT (source $$ cond =$ sink)
 
 f :: AisMessageFragment -> String
