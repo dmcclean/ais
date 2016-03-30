@@ -344,7 +344,10 @@ data AisMessage = ClassAPositionReport
   deriving (Eq, Show)
 
 getMessageType :: BitGet MessageID
-getMessageType = toEnum . fromIntegral <$> getAsWord8 6
+getMessageType = f . fromIntegral <$> getAsWord8 6
+  where
+    f n | n > 27 = MNone
+        | otherwise = toEnum n
 
 getRepeatIndicator :: BitGet RepeatIndicator
 getRepeatIndicator = getAsWord8 2
@@ -731,7 +734,7 @@ getAssignmentModeCommand = do
                                               56 -> do
                                                       assignmentB <- getAssignment
                                                       return $ [assignmentA, assignmentB]
-                                              _ -> error "Invalid assignment mode command."
+                                              _ -> do return $ [assignmentA] -- TODO: this isn't right, once we have a better monad this should be an error
                              return $ AssignmentModeCommand { .. }
 
 getInterrogationMessage :: BitGet AisMessage
