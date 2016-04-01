@@ -8,6 +8,7 @@ module Network.AIS.Vocabulary
 where
 
 import qualified Data.ExactPi.TypeLevel as E
+import Data.Char (digitToInt)
 import Data.Int
 import Data.Word
 import qualified Numeric.IEEE
@@ -29,6 +30,49 @@ instance Show MMSI where
     where
       showStr = showString $ printf "MMSI %0.9d" n
       app_prec = 10 -- precedence of application
+
+newtype MID = MID Word16
+  deriving (Eq, Ord, Show)
+
+toMid :: (Ord a, Integral a) => a -> Maybe MID
+toMid n = if 200 <= n && n <= 799
+            then Just . MID $ fromIntegral n
+            else Nothing
+
+data MMSIType = MmsiInvalid
+              | MmsiShipStation MID
+              | MmsiGroupShipStation MID
+              | MmsiCoastStation MID
+              | MmsiSarAircraft MID
+              | MmsiHandheldStation
+              | MmsiSarTransponder
+              | MmsiMobDevice
+              | MmsiEpirb
+              | MmsiCraftAssociatedWithParentShip MID
+              | MmsiNavigationalAid MID
+  deriving (Eq, Ord, Show)
+
+-- | Determines the type of an 'MMSI' using the structure documented in ITU-R M.585-7.
+mmsiType :: MMSI -> MMSIType
+mmsiType (MMSI n) | n <= 999999999 = case digits of
+                                       (0:0:ds)   | Just m <- takeMid ds -> MmsiCoastStation m
+                                       (0:ds)     | Just m <- takeMid ds -> MmsiGroupShipStation m
+                                       (1:1:1:ds) | Just m <- takeMid ds -> MmsiSarAircraft m
+                                       (8:_)                             -> MmsiHandheldStation
+                                       (9:7:0:_)                         -> MmsiSarTransponder
+                                       (9:7:2:_)                         -> MmsiMobDevice
+                                       (9:7:4:_)                         -> MmsiEpirb
+                                       (9:8:ds)   | Just m <- takeMid ds -> MmsiCraftAssociatedWithParentShip m
+                                       (9:9:ds)   | Just m <- takeMid ds -> MmsiNavigationalAid m
+                                       ds         | Just m <- takeMid ds -> MmsiShipStation m
+                                       _                                 -> MmsiInvalid
+                  | otherwise = MmsiInvalid
+  where
+    takeMid :: [Int] -> Maybe MID
+    takeMid (a:b:c:_) = toMid (100 P.* a P.+ 10 P.* b P.+ c)
+    takeMid _ = Nothing
+    digits :: [Int]
+    digits = digitToInt <$> printf "%0.9d" n
 
 type RepeatIndicator = Word8
 
