@@ -31,6 +31,8 @@ instance Show MMSI where
       showStr = showString $ printf "MMSI %0.9d" n
       app_prec = 10 -- precedence of application
 
+-- | Maritime Identification Digits identifying a country or international
+-- authority.
 newtype MID = MID Word16
   deriving (Eq, Ord, Show)
 
@@ -39,6 +41,11 @@ toMid n = if 200 <= n && n <= 799
             then Just . MID $ fromIntegral n
             else Nothing
 
+-- | The type of an 'MMSI'.
+--
+-- MMSIs with certain leading digits are reserved for certain
+-- classes of stations. For some of these classes, the MMSI also
+-- includes 'MID' identifying the authority that issues the MMSI.
 data MMSIType = MmsiInvalid
               | MmsiShipStation MID
               | MmsiGroupShipStation MID
@@ -76,6 +83,7 @@ mmsiType (MMSI n) | n <= 999999999 = case digits of
 
 type RepeatIndicator = Word8
 
+-- | A radio channel across which AIS messages may be conveyed.
 data Channel = AisChannelA
              | AisChannelB
              | ItuRM1084Channel Word16 -- ^ A radio channel number of 25 kHz simplex, or simplex use of 25 kHz duplex,
