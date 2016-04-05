@@ -84,11 +84,32 @@ mmsiType (MMSI n) | n <= 999999999 = case digits of
 type RepeatIndicator = Word8
 
 -- | A radio channel across which AIS messages may be conveyed.
-data Channel = AisChannelA
-             | AisChannelB
+data Channel = AisChannelA -- ^ AIS channel A, also known as VHF channel 87B.
+             | AisChannelB -- ^ AIS channel B, also known as VHF channel 88B.
              | ItuRM1084Channel Word16 -- ^ A radio channel number of 25 kHz simplex, or simplex use of 25 kHz duplex,
                                        -- in accordance with <https://www.itu.int/rec/R-REC-M.1084/en Recommendation ITU-R M.1084>.
   deriving (Eq, Show, Read)
+
+-- | Gets the radio frequency associated with a radio channel across which AIS messages may be conveyed.
+channelFrequency :: Channel -> Maybe (Frequency Rational)
+channelFrequency AisChannelA = Just $ 161.975 D.*~ mega hertz
+channelFrequency AisChannelB = Just $ 162.025 D.*~ mega hertz
+channelFrequency (ItuRM1084Channel n) |    6 == n              = Just $ 156.3 D.*~ mega hertz
+                                      |    8 <= n && n <=   17 = fromBase 156.4   $ n P.- 8
+                                      |   67 <= n && n <=   77 = fromBase 156.375 $ n P.- 67
+                                      | 1006 == n              = Nothing
+                                      | 1008 <= n && n <= 1017 = Nothing
+                                      | 1001 <= n && n <= 1028 = fromBase 156.050 $ n P.- 1001
+                                      | 1067 <= n && n <= 1077 = Nothing
+                                      | 1060 <= n && n <= 1088 = fromBase 156.025 $ n P.- 1060
+                                      | 2006 == n              = Nothing
+                                      | 2008 <= n && n <= 2017 = Nothing
+                                      | 2001 <= n && n <= 2028 = fromBase 160.650 $ n P.- 2001
+                                      | 2067 <= n && n <= 2077 = Nothing
+                                      | 2060 <= n && n <= 2088 = fromBase 160.625 $ n P.- 2060
+                                      | otherwise              = Nothing
+  where
+    fromBase b o = Just $ (b D.*~ mega hertz) D.+ (50 D.*~ kilo hertz) D.* (realToFrac o D.*~ one)
 
 data MessageID = MNone
                | MScheduledClassAPositionReport

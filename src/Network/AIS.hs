@@ -492,7 +492,12 @@ getAssignedReportingInterval = f . fromIntegral <$> getAsWord8 4
             else toEnum n
 
 getChannel :: BitGet Channel
-getChannel = ItuRM1084Channel <$> getAsWord16 12 -- TODO: recognize A and B by their numbers?
+getChannel = f <$> getAsWord16 12
+  where
+    f 2087 = AisChannelA
+    f 2088 = AisChannelB
+    f n    = ItuRM1084Channel n
+
 
 getTargetDesignation :: BitGet TargetDesignation
 getTargetDesignation = do
