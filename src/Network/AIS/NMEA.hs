@@ -56,7 +56,7 @@ aisMessage = do
                _ <- char '*'
                _ <- anyChar
                _ <- anyChar
-               skipWhile (not . (== '\r')) >> char '\r'
+               skipWhile (not . (== '\r')) >> skipSpace
                let payloadFragment = translate rawPayload fillBits
                return $ AisMessageFragment { .. }
 
