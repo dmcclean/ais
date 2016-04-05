@@ -111,7 +111,7 @@ data AisMessage = ClassAPositionReport
                 | SafetyRelatedMessage
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , sourceID :: MMSI
+                  , userID :: MMSI
                   , sequenceNumber :: Maybe Word8
                   , addressee :: Addressee
                   , retransmitFlag :: Bool
@@ -120,7 +120,7 @@ data AisMessage = ClassAPositionReport
                 | BinaryMessage
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , sourceID :: MMSI
+                  , userID :: MMSI
                   , sequenceNumber :: Maybe Word8
                   , addressee :: Addressee
                   , retransmitFlag :: Bool
@@ -131,7 +131,7 @@ data AisMessage = ClassAPositionReport
                 | AcknowledgementMessage
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , sourceID :: MMSI
+                  , userID :: MMSI
                   , acknowledgements :: [Acknowledgement]
                   }
                 | BaseStationReport
@@ -150,7 +150,7 @@ data AisMessage = ClassAPositionReport
                 | TimeInquiry
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , sourceID :: MMSI
+                  , userID :: MMSI
                   , destinationID :: MMSI
                   }
                 | TimeResponse
@@ -203,7 +203,7 @@ data AisMessage = ClassAPositionReport
                 | AidToNavigationReport
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , aidID :: MMSI
+                  , userID :: MMSI
                   , typeOfAid :: AidToNavigation
                   , name :: Text
                   , positionAccuracy :: Bool
@@ -222,25 +222,25 @@ data AisMessage = ClassAPositionReport
                 | InterrogationMessage
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , sourceID :: MMSI
+                  , userID :: MMSI
                   , interrogations :: [Interrogation]
                   }
                 | DataLinkManagementMessage
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , sourceID :: MMSI
+                  , userID :: MMSI
                   , reservations :: [Reservation]
                   }
                 | AssignmentModeCommand
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , sourceID :: MMSI
+                  , userID :: MMSI
                   , assignments :: [Assignment]
                   }
                 | DgnssBroadcastMessage
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
-                  , sourceID :: MMSI
+                  , userID :: MMSI
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
                   , payload :: ByteString
@@ -643,7 +643,7 @@ getAddressedSafetyRelatedMessage :: BitGet AisMessage
 getAddressedSafetyRelatedMessage = do
                                      let messageType = MAddressedSafetyRelatedMessage
                                      repeatIndicator <- getRepeatIndicator
-                                     sourceID <- getMMSI
+                                     userID <- getMMSI
                                      sequenceNumber <- Just <$> getAsWord8 2
                                      addressee <- Addressed <$> getMMSI
                                      retransmitFlag <- getBit
@@ -655,7 +655,7 @@ getSafetyRelatedBroadcastMessage :: BitGet AisMessage
 getSafetyRelatedBroadcastMessage = do
                                      let messageType = MSafetyRelatedBroadcastMessage
                                      repeatIndicator <- getRepeatIndicator
-                                     sourceID <- getMMSI
+                                     userID <- getMMSI
                                      skip 2
                                      safetyRelatedText <- getRemainingSixBitText
                                      let addressee = Broadcast
@@ -667,7 +667,7 @@ getAddressedBinaryMessage :: BitGet AisMessage
 getAddressedBinaryMessage = do
                               let messageType = MBinaryAddressedMessage
                               repeatIndicator <- getRepeatIndicator
-                              sourceID <- getMMSI
+                              userID <- getMMSI
                               sequenceNumber <- Just <$> getAsWord8 2
                               addressee <- Addressed <$> getMMSI
                               retransmitFlag <- getBit
@@ -684,7 +684,7 @@ getBinaryBroadcastMessage :: BitGet AisMessage
 getBinaryBroadcastMessage = do
                               let messageType = MBinaryBroadcastMessage
                               repeatIndicator <- getRepeatIndicator
-                              sourceID <- getMMSI
+                              userID <- getMMSI
                               skip 2
                               applicationIdentifier <- Just <$> getApplicationIdentifier
                               n <- remaining
@@ -723,7 +723,7 @@ getDataLinkManagementMessage :: BitGet AisMessage
 getDataLinkManagementMessage = do
                                  let messageType = MDataLinkManagementMessage
                                  repeatIndicator <- getRepeatIndicator
-                                 sourceID <- getMMSI
+                                 userID <- getMMSI
                                  skip 2
                                  r <- getReservation
                                  (n, s) <- (`divMod` 30) <$> remaining
@@ -736,7 +736,7 @@ getAssignmentModeCommand :: BitGet AisMessage
 getAssignmentModeCommand = do
                              let messageType = MAssignmentModeCommand
                              repeatIndicator <- getRepeatIndicator
-                             sourceID <- getMMSI
+                             userID <- getMMSI
                              skip 2
                              assignmentA <- getAssignment
                              n <- remaining
@@ -754,7 +754,7 @@ getInterrogationMessage :: BitGet AisMessage
 getInterrogationMessage = do
                             let messageType = MInterrogation
                             repeatIndicator <- getRepeatIndicator
-                            sourceID <- getMMSI
+                            userID <- getMMSI
                             skip 2
                             interrogations <- getInterrogations
                             return $ InterrogationMessage { .. }
@@ -793,7 +793,7 @@ getTimeInquiry :: BitGet AisMessage
 getTimeInquiry = do
                    let messageType = MTimeInquiry
                    repeatIndicator <- getRepeatIndicator
-                   sourceID <- getMMSI
+                   userID <- getMMSI
                    skip 2
                    destinationID <- getMMSI
                    skip 2
@@ -863,7 +863,7 @@ getStaticDataReport = do
 getAcknowledgementMessage :: MessageID -> BitGet AisMessage
 getAcknowledgementMessage messageType = do
                                           repeatIndicator <- getRepeatIndicator
-                                          sourceID <- getMMSI
+                                          userID <- getMMSI
                                           skip 2
                                           n <- remaining
                                           acknowledgements <- replicateM (n `div` 32) getAcknowledgement
@@ -873,7 +873,7 @@ getDgnssBroadcastMessage :: BitGet AisMessage
 getDgnssBroadcastMessage = do
                              let messageType = MDgnssBroadcastBinaryMessage
                              repeatIndicator <- getRepeatIndicator
-                             sourceID <- getMMSI
+                             userID <- getMMSI
                              skip 2
                              longitude <- getLowResolutionLongitude
                              latitude <- getLowResolutionLatitude
@@ -922,7 +922,7 @@ getAidToNavigationReport :: BitGet AisMessage
 getAidToNavigationReport = do
                              let messageType = MAidToNavigationReport
                              repeatIndicator <- getRepeatIndicator
-                             aidID <- getMMSI
+                             userID <- getMMSI
                              typeOfAid <- getAidToNavigation
                              initialName <- getSixBitText 20
                              positionAccuracy <- getBit
@@ -991,7 +991,7 @@ getSingleSlotBinaryMessage :: BitGet AisMessage
 getSingleSlotBinaryMessage = do
                                let messageType = MSingleSlotBinaryMessage
                                repeatIndicator <- getRepeatIndicator
-                               sourceID <- getMMSI
+                               userID <- getMMSI
                                isAddressed <- getBit
                                hasApplicationID <- getBit
                                addressee <- if isAddressed
@@ -1011,7 +1011,7 @@ getMultipleSlotBinaryMessage :: BitGet AisMessage
 getMultipleSlotBinaryMessage = do
                                  let messageType = MMultipleSlotBinaryMessage
                                  repeatIndicator <- getRepeatIndicator
-                                 sourceID <- getMMSI
+                                 userID <- getMMSI
                                  isAddressed <- getBit
                                  hasApplicationID <- getBit
                                  addressee <- if isAddressed
