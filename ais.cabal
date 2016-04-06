@@ -19,7 +19,8 @@ cabal-version:       >=1.10
 library
   exposed-modules:     Network.AIS,
                        Network.AIS.Vocabulary,
-                       Network.AIS.NMEA
+                       Network.AIS.NMEA,
+                       Network.AIS.State
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.8 && <4.9,
@@ -30,6 +31,7 @@ library
                        base16-bytestring,
                        conduit,
                        conduit-extra,
+                       containers,
                        dimensional >= 1.0.1.1,
                        exact-pi,
                        ieee754,
