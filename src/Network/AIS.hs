@@ -8,6 +8,7 @@ module Network.AIS
 , getMessage
 , isPositionReport
 , example
+, trim
 )
 where
 
@@ -21,6 +22,13 @@ import Data.Time
 import Data.Word
 import Network.AIS.Vocabulary
 import Numeric.Units.Dimensional.Coercion
+
+trim :: Text -> Text
+trim = stripStart . dropWhileEnd p
+  where
+    p '@' = True
+    p ' ' = True
+    p _ = False
 
 sixBitCharacters :: Text
 sixBitCharacters = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^- !\"#$%&`()*+,-./0123456789:;<=>?"
