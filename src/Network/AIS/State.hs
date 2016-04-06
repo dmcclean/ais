@@ -1,7 +1,7 @@
 module Network.AIS.State where
 
-import Data.Map (Map)
-import qualified Data.Map as M
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import Data.Word (Word16)
 import Network.AIS (AisMessage(..))
@@ -16,14 +16,14 @@ frameLength = 2500
 maxAge :: SlotOffset
 maxAge = 8 * frameLength
 
-data StationState = StationState { stationID :: MMSI
-                                 , displayName :: Maybe Text
+data StationState = StationState { displayName :: Maybe Text
                                  , lastReceived :: Maybe Slot -- Nothing means a long time ago
                                  , lastReceivedChannel :: Channel
                                  , lastPosition :: Maybe (Longitude, Latitude)
                                  , mostRecentlyVictimized :: Maybe Slot
                                  , lastSyncState :: SyncState
                                  , lastNavigationState :: Maybe NavigationalStatus
+                                 , lastReceivedStationsCount :: Maybe Word16
                                  }
   deriving (Eq, Show)
 
@@ -52,5 +52,23 @@ tickStationDirectory t d = d { directoryLastUpdated = t, stations = (ageOutVicti
                           | otherwise = s
 
 updateStationDirectory :: Slot -> Channel -> AisMessage -> StationDirectory -> StationDirectory
-updateStationDirectory _ _ m d | Just (userID m) == ownStationID d = d -- ignore messages from own station
-                               | otherwise = d
+updateStationDirectory t c m d | Just (userID m) == ownStationID d = d -- ignore messages from own station
+                               | otherwise = d { stations = M.alter alteration (userID m) $ stations d }
+  where
+    alteration :: Maybe StationState -> Maybe StationState
+    alteration (Just x) = Just $ f x
+    alteration Nothing  = Just $ f defaultStationState
+    defaultStationState = StationState { displayName = Nothing
+                                       , lastReceived = Just t
+                                       , lastReceivedChannel = c
+                                       , lastPosition = Nothing
+                                       , mostRecentlyVictimized = Nothing
+                                       , lastSyncState = SyncPeer
+                                       , lastNavigationState = Nothing
+                                       , lastReceivedStationsCount = Nothing
+                                       }
+    f = integrateMessage m . integrateMetadata
+    integrateMetadata :: StationState -> StationState
+    integrateMetadata s = s { lastReceived = Just t, lastReceivedChannel = c }
+    integrateMessage :: AisMessage -> StationState -> StationState
+    integrateMessage _ = id
