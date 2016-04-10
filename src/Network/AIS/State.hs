@@ -68,7 +68,21 @@ updateStationDirectory t c m d | Just (userID m) == ownStationID d = d -- ignore
                                        , lastReceivedStationsCount = Nothing
                                        }
     f = integrateMessage m . integrateMetadata
+    extractPos :: AisMessage -> Maybe (Longitude, Latitude)
+    extractPos msg = do
+                       lon <- longitude msg
+                       lat <- latitude msg
+                       return $ (lon, lat)
     integrateMetadata :: StationState -> StationState
     integrateMetadata s = s { lastReceived = Just t, lastReceivedChannel = c }
     integrateMessage :: AisMessage -> StationState -> StationState
-    integrateMessage _ = id
+    integrateMessage (ClassAPositionReport {}) s = s { lastNavigationState = Just $ navigationalStatus m, lastPosition = extractPos m }
+    integrateMessage (BaseStationReport {}) s = s { lastPosition = extractPos m }
+    integrateMessage (TimeResponse {}) s = s { lastPosition = extractPos m }
+    integrateMessage (AidToNavigationReport {}) s = s { lastPosition = extractPos m }
+    integrateMessage (DgnssBroadcastMessage {}) s = s { lastPosition = extractPos m }
+    integrateMessage (SarAircraftPositionReport {}) s = s { lastPosition = extractPos m }
+    integrateMessage (StandardClassBPositionReport {}) s = s { lastPosition = extractPos m }
+    integrateMessage (ExtendedClassBPositionReport {}) s = s { lastPosition = extractPos m }
+    integrateMessage (LongRangePositionReport {}) s = s { lastPosition = extractPos m }
+    integrateMessage _ s = s
