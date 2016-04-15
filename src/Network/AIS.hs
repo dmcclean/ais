@@ -283,7 +283,7 @@ data AisMessage = ClassAPositionReport
                   , trueHeading :: Maybe Heading
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
-                  , capabilities :: ClassBCapabilities
+                  , capabilities :: StationCapabilities
                   , assignedModeFlag :: Bool
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
@@ -565,14 +565,17 @@ getTaggedCommunicationsState = do
                                    then getITDMACommunicationsState
                                    else getSOTDMACommunicationsState
 
-getClassBCapabilities :: BitGet ClassBCapabilities
-getClassBCapabilities = do
-                          carrierSenseUnit <- getBit
-                          equippedWithDisplay <- getBit
-                          equippedWithDigitalSelectiveCalling <- getBit
-                          capableOfOperatingOverEntireMarineBand <- getBit
-                          supportsChannelManagement <- getBit
-                          return $ ClassBCapabilities { .. }
+getStationCapabilities :: BitGet StationCapabilities
+getStationCapabilities = do
+                           carrierSenseUnit <- getBit
+                           let stationClass = case carrierSenseUnit of
+                                                True -> ClassBCarrierSense
+                                                False -> ClassBSelfOrganizing
+                           equippedWithDisplay <- getBit
+                           equippedWithDigitalSelectiveCalling <- getBit
+                           capableOfOperatingOverEntireMarineBand <- getBit
+                           supportsChannelManagement <- getBit
+                           return $ StationCapabilities { .. }
 
 getMessage :: BitGet AisMessage
 getMessage = do
@@ -965,7 +968,7 @@ getStandardClassBPositionReport = do
                                     trueHeading <- getHeading
                                     (timeStamp, positionFixingStatus) <- getTimeStamp
                                     skip 2
-                                    capabilities <- getClassBCapabilities
+                                    capabilities <- getStationCapabilities
                                     assignedModeFlag <- getBit
                                     raimFlag <- getBit
                                     communicationsState <- getTaggedCommunicationsState

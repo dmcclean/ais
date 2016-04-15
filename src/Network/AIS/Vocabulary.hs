@@ -450,10 +450,24 @@ overallLength dims = forwardOfReferencePoint dims + aftOfReferencePoint dims
 overallBeam :: VesselDimensions -> Length Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
 
-data ClassBCapabilities = ClassBCapabilities { carrierSenseUnit :: Bool
-                                             , equippedWithDisplay :: Bool
-                                             , equippedWithDigitalSelectiveCalling :: Bool
-                                             , capableOfOperatingOverEntireMarineBand :: Bool
-                                             , supportsChannelManagement :: Bool
-                                             }
+data StationClass = ClassA
+                  | ClassB
+                  | ClassBSelfOrganizing
+                  | ClassBCarrierSense
   deriving (Eq, Show, Read)
+
+data StationCapabilities = StationCapabilities { stationClass :: StationClass
+                                               , equippedWithDisplay :: Bool
+                                               , equippedWithDigitalSelectiveCalling :: Bool
+                                               , capableOfOperatingOverEntireMarineBand :: Bool
+                                               , supportsChannelManagement :: Bool
+                                               }
+  deriving (Eq, Show, Read)
+
+classACapabilities :: StationCapabilities
+classACapabilities = StationCapabilities { stationClass = ClassA
+                                         , equippedWithDisplay = True
+                                         , equippedWithDigitalSelectiveCalling = True
+                                         , capableOfOperatingOverEntireMarineBand = True
+                                         , supportsChannelManagement = True
+                                         }
