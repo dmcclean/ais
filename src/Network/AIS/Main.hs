@@ -29,7 +29,7 @@ main = do
 
 filt :: Either String AisMessage -> Bool
 filt (Left _) = True
-filt (Right m) = not $ isPositionReport m
+filt (Right m) = True -- not $ isPositionReport m
 
 mergeFragments :: (Monad m) => Conduit AisMessageFragment m ByteString
 mergeFragments = do
