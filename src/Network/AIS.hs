@@ -182,7 +182,7 @@ data AisMessage = ClassAPositionReport
                   , imoNumber :: Word32
                   , callSign :: Text
                   , name :: Text
-                  , typeOfShipAndCargo :: Word8
+                  , typeOfShipAndCargo :: TypeOfShipAndCargo
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   , eta :: Word32 -- TODO: improve type of this field, which is month / day / hour / minute
@@ -202,7 +202,7 @@ data AisMessage = ClassAPositionReport
                   , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , partNumber :: Word8
-                  , typeOfShipAndCargo :: Word8
+                  , typeOfShipAndCargo :: TypeOfShipAndCargo
                   , vendorID :: Text
                   , callSign :: Text
                   , vesselDimensions :: VesselDimensions
@@ -301,7 +301,7 @@ data AisMessage = ClassAPositionReport
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
                   , name :: Text
-                  , typeOfShipAndCargo :: Word8
+                  , typeOfShipAndCargo :: TypeOfShipAndCargo
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   , raimFlag :: Bool
@@ -325,7 +325,7 @@ data AisMessage = ClassAPositionReport
                   , userID :: MMSI
                   , region :: Region
                   , stationType :: StationType
-                  , typeOfShipAndCargo :: Word8
+                  , typeOfShipAndCargo :: TypeOfShipAndCargo
                   , transmissionMode :: TransmissionMode
                   , reportingInterval :: AssignedReportingInterval
                   , quietTime :: TimeMinutes Word8
@@ -482,6 +482,9 @@ getPositionFixingDevice = f . fromIntegral <$> getAsWord8 4
 toStationType :: Word8 -> StationType
 toStationType n | n <= 9    = toEnum . fromIntegral $ n
                 | otherwise = StationsReserved
+
+getTypeOfShipAndCargo :: BitGet TypeOfShipAndCargo
+getTypeOfShipAndCargo = TypeOfShipAndCargo <$> getAsWord8 8
 
 getTransmissionMode :: Int -> BitGet TransmissionMode
 getTransmissionMode n = f . fromIntegral <$> getAsWord8 n
@@ -841,7 +844,7 @@ getClassAStaticData = do
                         imoNumber <- getAsWord32 30
                         callSign <- getSixBitText 7
                         name <- getSixBitText 20
-                        typeOfShipAndCargo <- getAsWord8 8
+                        typeOfShipAndCargo <- getTypeOfShipAndCargo
                         vesselDimensions <- getVesselDimensions
                         positionFixingDevice <- getPositionFixingDevice
                         eta <- getAsWord32 20
@@ -862,7 +865,7 @@ getStaticDataReport = do
                                  name <- getSixBitText 20
                                  return $ StaticDataReportPartA { .. }
                           1 -> do
-                                 typeOfShipAndCargo <- getAsWord8 8
+                                 typeOfShipAndCargo <- getTypeOfShipAndCargo
                                  vendorID <- getSixBitText 7
                                  callSign <- getSixBitText 7
                                  vesselDimensions <- getVesselDimensions
@@ -918,7 +921,7 @@ getGroupAssignmentCommand = do
                               skip 2
                               region <- getRegion
                               rawStationType <- getAsWord8 4
-                              typeOfShipAndCargo <- getAsWord8 8
+                              typeOfShipAndCargo <- getTypeOfShipAndCargo
                               skip 22
                               transmissionMode <- getTransmissionMode 2
                               reportingInterval <- getAssignedReportingInterval
@@ -989,7 +992,7 @@ getExtendedClassBPositionReport = do
                                     (timeStamp, positionFixingStatus) <- getTimeStamp
                                     skip 4
                                     name <- getSixBitText 20
-                                    typeOfShipAndCargo <- getAsWord8 8
+                                    typeOfShipAndCargo <- getTypeOfShipAndCargo
                                     vesselDimensions <- getVesselDimensions
                                     positionFixingDevice <- getPositionFixingDevice
                                     raimFlag <- getBit

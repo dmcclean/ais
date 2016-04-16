@@ -471,3 +471,80 @@ classACapabilities = StationCapabilities { stationClass = ClassA
                                          , capableOfOperatingOverEntireMarineBand = True
                                          , supportsChannelManagement = True
                                          }
+
+-- | A type of ship and cargo.
+newtype TypeOfShipAndCargo = TypeOfShipAndCargo Word8
+  deriving (Eq, Ord)
+
+instance Show TypeOfShipAndCargo where
+  show t@(TypeOfShipAndCargo n) = printf "TypeOfShipAndCargo %0.2d" n ++ showDecode (decodeTypeOfShip t)
+    where
+      showDecode (Nothing, _) = ""
+      showDecode (Just t', Nothing) = " {- " ++ show t' ++ " -}"
+      showDecode (Just t', Just h)  = " {- " ++ show t' ++ " carrying " ++ show h ++ " -}"
+
+-- | Decodes a 'TypeOfShipAndCargo' by splitting it into possibly a 'ShipType' and possibly
+-- a 'HazardOrPollutantCategory'. Reserved codes are decoded to 'Nothing'.
+decodeTypeOfShip :: TypeOfShipAndCargo -> (Maybe ShipType, Maybe HazardOrPollutantCategory)
+decodeTypeOfShip (TypeOfShipAndCargo n) = decode n
+  where
+    decode 30 = simple FishingVessel
+    decode 31 = simple TowingVessel
+    decode 32 = simple TowingVessel
+    decode 33 = simple DredgingOrUnderwaterOperationsVessel
+    decode 34 = simple DivingVessel
+    decode 35 = simple MilitaryVessel
+    decode 36 = simple SailingVessel
+    decode 37 = simple PleasureCraft
+    decode 50 = simple PilotVessel
+    decode 51 = simple SearchAndRescueVessel
+    decode 52 = simple Tug
+    decode 53 = simple PortTender
+    decode 54 = simple AntiPollutionVessel
+    decode 55 = simple LawEnforcementVessel
+    decode 58 = simple MedicalTransport
+    decode 59 = simple NonPartyToArmedConflict
+    decode n' | 20 <= n' && n' <= 29 = possiblyHazardous WingInGroundEffect
+              | 40 <= n' && n' <= 49 = possiblyHazardous HighSpeedCraft
+              | 60 <= n' && n' <= 69 = possiblyHazardous PassengerShip
+              | 70 <= n' && n' <= 79 = possiblyHazardous CargoShip
+              | 80 <= n' && n' <= 89 = possiblyHazardous Tanker
+              | otherwise            = (Nothing, Nothing)
+    possiblyHazardous t = (Just t, hazard)
+    simple t = (Just t, Nothing)
+    hazard = hazard' (n `mod` 10)
+    hazard' 1 = Just HazardX
+    hazard' 2 = Just HazardY
+    hazard' 3 = Just HazardZ
+    hazard' 4 = Just HazardOS
+    hazard' _ = Nothing
+
+-- | An IMO Hazard or Pollutant Category.
+data HazardOrPollutantCategory = HazardX -- ^ IMO Hazard or Pollutant Category X
+                               | HazardY -- ^ IMO Hazard or Pollutant Category Y
+                               | HazardZ -- ^ IMO Hazard or Pollutant Category Z
+                               | HazardOS -- ^ IMO Hazard or Pollutant Category OS
+  deriving (Eq, Ord, Enum, Show, Read)
+
+-- | A type of ship.
+data ShipType = PilotVessel
+              | SearchAndRescueVessel
+              | Tug
+              | PortTender
+              | AntiPollutionVessel
+              | LawEnforcementVessel
+              | MedicalTransport
+              | NonPartyToArmedConflict
+              | FishingVessel
+              | TowingVessel
+              | DredgingOrUnderwaterOperationsVessel
+              | DivingVessel
+              | MilitaryVessel
+              | SailingVessel
+              | PleasureCraft
+              | WingInGroundEffect
+              | HighSpeedCraft
+              | PassengerShip
+              | CargoShip
+              | Tanker
+  deriving (Eq, Ord, Show, Read)
