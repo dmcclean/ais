@@ -83,13 +83,10 @@ digits :: Word32 -> [Int]
 digits n = digitToInt <$> printf "%0.9d" n
 
 newtype IMONumber = IMO Word32
-  deriving (Eq, Ord)
-
-instance Show IMONumber where
-  show (IMO n) = "IMO " ++ printf "%0.7d" n
+  deriving (Eq, Ord, Show)
 
 isValidImoNumber :: IMONumber -> Bool
-isValidImoNumber (IMO n) | n > 9999999 = False
+isValidImoNumber (IMO n) | n < 1000000 || 9999999 < n = False
                          | otherwise = n `mod` 10 == (fromIntegral . P.sum $ zipWith (P.*) (digits n) [7,6,5,4,3,2,0])
 
 type RepeatIndicator = Word8
