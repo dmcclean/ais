@@ -179,7 +179,7 @@ data AisMessage = ClassAPositionReport
                   , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
                   , aisVersionIndicator :: Word8
-                  , imoNumber :: Word32
+                  , imoNumber :: IMONumber
                   , callSign :: Text
                   , name :: Text
                   , typeOfShipAndCargo :: TypeOfShipAndCargo
@@ -398,6 +398,9 @@ getTimeStamp = do
 
 getMMSI :: BitGet MMSI
 getMMSI = MMSI <$> getAsWord32 30
+
+getImoNumber :: BitGet IMONumber
+getImoNumber = IMO <$> getAsWord32 30
 
 getSyncState :: BitGet SyncState
 getSyncState = toEnum . fromIntegral <$> getAsWord8 2
@@ -841,7 +844,7 @@ getClassAStaticData = do
                         repeatIndicator <- getRepeatIndicator
                         userID <- getMMSI
                         aisVersionIndicator <- getAsWord8 2
-                        imoNumber <- getAsWord32 30
+                        imoNumber <- getImoNumber
                         callSign <- getSixBitText 7
                         name <- getSixBitText 20
                         typeOfShipAndCargo <- getTypeOfShipAndCargo

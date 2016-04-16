@@ -61,7 +61,7 @@ data MMSIType = MmsiInvalid
 
 -- | Determines the type of an 'MMSI' using the structure documented in ITU-R M.585-7.
 mmsiType :: MMSI -> MMSIType
-mmsiType (MMSI n) | n <= 999999999 = case digits of
+mmsiType (MMSI n) | n <= 999999999 = case digits n of
                                        (0:0:ds)   | Just m <- takeMid ds -> MmsiCoastStation m
                                        (0:ds)     | Just m <- takeMid ds -> MmsiGroupShipStation m
                                        (1:1:1:ds) | Just m <- takeMid ds -> MmsiSarAircraft m
@@ -78,8 +78,19 @@ mmsiType (MMSI n) | n <= 999999999 = case digits of
     takeMid :: [Int] -> Maybe MID
     takeMid (a:b:c:_) = toMid (100 P.* a P.+ 10 P.* b P.+ c)
     takeMid _ = Nothing
-    digits :: [Int]
-    digits = digitToInt <$> printf "%0.9d" n
+
+digits :: Word32 -> [Int]
+digits n = digitToInt <$> printf "%0.9d" n
+
+newtype IMONumber = IMO Word32
+  deriving (Eq, Ord)
+
+instance Show IMONumber where
+  show (IMO n) = "IMO " ++ printf "%0.7d" n
+
+isValidImoNumber :: IMONumber -> Bool
+isValidImoNumber (IMO n) | n > 9999999 = False
+                         | otherwise = n `mod` 10 == (fromIntegral . P.sum $ zipWith (P.*) (digits n) [7,6,5,4,3,2,0])
 
 type RepeatIndicator = Word8
 
