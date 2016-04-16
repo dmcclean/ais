@@ -11,18 +11,21 @@ import Data.Conduit.Attoparsec
 import Data.Conduit.Binary
 import qualified Data.Conduit.List as CL
 import Data.Conduit.Text
+import qualified Data.Text as T
 
 main :: IO ()
 main = do
-         let path = "C:\\Users\\Doug\\Downloads\\nmea-sample\\nmea-sample.txt"
+         let path = "C:\\Users\\Douglas\\Downloads\\nmea-sample\\nmea-sample.txt"
          let source = sourceFile path
          let cond = decode utf8 =$= Data.Conduit.Text.lines =$= CL.isolate 10000 =$= conduitParser aisMessage =$= CL.map snd =$= mergeFragments =$= CL.map (\m -> runBitGet m getMessage) =$= CL.filter filt =$= CL.map show
+         {-
          let sink = transPipe lift $ CL.mapM_ (\x -> do
                                                        Prelude.putStrLn x
                                                        _ <- Prelude.getLine
                                                        return ())
-         --let sink2 = CL.map T.pack =$= encode utf8 =$ sinkFile "C:\\Users\\Doug\\Downloads\\nmea-sample\\decoded.txt"
-         runResourceT (source $$ cond =$ sink)
+         -}
+         let sink2 = CL.map (++ "\n") =$= CL.map T.pack =$= encode utf8 =$ sinkFile "C:\\Users\\Douglas\\Downloads\\nmea-sample\\decoded.txt"
+         runResourceT (source $$ cond =$ sink2)
 
 filt :: Either String AisMessage -> Bool
 filt (Left _) = True
