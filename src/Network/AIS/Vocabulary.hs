@@ -434,8 +434,8 @@ deriving instance Show UnpackedRateOfTurn
 
 type Direction n a = SQuantity ((E.ExactNatural 2 E.* E.Pi) E./ E.ExactNatural n) DPlaneAngle a
 
-type Course = Direction 3600 Word16
-type Heading = Direction 360 Word16
+type AngleTenthsOfDegree = Direction 3600 Word16
+type AngleDegrees = Direction 360 Word16
 
 type LengthNauticalMiles a = SQuantity (E.ExactNatural 1852) DLength a
 
@@ -459,9 +459,11 @@ overallBeam :: VesselDimensions -> Length Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
 
 data StationClass = ClassA
-                  | ClassB
-                  | ClassBSelfOrganizing
-                  | ClassBCarrierSense
+                  | ClassB (Maybe ClassBCoordinationType)
+  deriving (Eq, Show, Read)
+
+data ClassBCoordinationType = SelfOrganizing
+                            | CarrierSensing
   deriving (Eq, Show, Read)
 
 data StationCapabilities = StationCapabilities { stationClass :: StationClass

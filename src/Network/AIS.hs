@@ -108,8 +108,8 @@ data AisMessage = ClassAPositionReport
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
-                  , courseOverGround :: Maybe Course
-                  , trueHeading :: Maybe Heading
+                  , courseOverGround :: Maybe AngleTenthsOfDegree
+                  , trueHeading :: Maybe AngleDegrees
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
                   , maneuverIndicator :: SpecialManeuverIndicator
@@ -262,7 +262,7 @@ data AisMessage = ClassAPositionReport
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
-                  , courseOverGround :: Maybe Course
+                  , courseOverGround :: Maybe AngleTenthsOfDegree
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
                   , altitudeSensor :: AltitudeSensor
@@ -279,8 +279,8 @@ data AisMessage = ClassAPositionReport
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
-                  , courseOverGround :: Maybe Course
-                  , trueHeading :: Maybe Heading
+                  , courseOverGround :: Maybe AngleTenthsOfDegree
+                  , trueHeading :: Maybe AngleDegrees
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
                   , capabilities :: StationCapabilities
@@ -296,8 +296,8 @@ data AisMessage = ClassAPositionReport
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
-                  , courseOverGround :: Maybe Course
-                  , trueHeading :: Maybe Heading
+                  , courseOverGround :: Maybe AngleTenthsOfDegree
+                  , trueHeading :: Maybe AngleDegrees
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
                   , name :: Text
@@ -346,7 +346,7 @@ data AisMessage = ClassAPositionReport
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
                   , speedOverGround' :: VelocityKnots
-                  , courseOverGround :: Maybe Course
+                  , courseOverGround :: Maybe AngleTenthsOfDegree
                   , positionLatency :: Bool
                   }
                 | InvalidMessage
@@ -443,21 +443,21 @@ getRateOfTurn = do
                              127 -> RateStarboardNoSensor
                              r -> RateSpecified r
 
-getCourse :: BitGet (Maybe Course)
+getCourse :: BitGet (Maybe AngleTenthsOfDegree)
 getCourse = do
               n <- getAsWord16 12
               return $ if n < 3600
                          then Just $ coerce n
                          else Nothing
 
-getLowResolutionCourse :: BitGet (Maybe Course)
+getLowResolutionCourse :: BitGet (Maybe AngleTenthsOfDegree)
 getLowResolutionCourse = do
                            n <- getAsWord16 9
                            return $ if n < 360
                                       then Just $ coerce (n * 10)
                                       else Nothing
 
-getHeading :: BitGet (Maybe Heading)
+getHeading :: BitGet (Maybe AngleDegrees)
 getHeading = do
                n <- getAsWord16 9
                return $ if n < 360
@@ -575,8 +575,8 @@ getStationCapabilities :: BitGet StationCapabilities
 getStationCapabilities = do
                            carrierSenseUnit <- getBit
                            let stationClass = case carrierSenseUnit of
-                                                True -> ClassBCarrierSense
-                                                False -> ClassBSelfOrganizing
+                                                True -> ClassB (Just CarrierSensing)
+                                                False -> ClassB (Just SelfOrganizing)
                            equippedWithDisplay <- getBit
                            equippedWithDigitalSelectiveCalling <- getBit
                            capableOfOperatingOverEntireMarineBand <- getBit
