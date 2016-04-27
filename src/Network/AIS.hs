@@ -575,8 +575,8 @@ getStationCapabilities :: BitGet StationCapabilities
 getStationCapabilities = do
                            carrierSenseUnit <- getBit
                            let stationClass = case carrierSenseUnit of
-                                                True -> ClassB (Just CarrierSensing)
-                                                False -> ClassB (Just SelfOrganizing)
+                                                True -> ClassB CarrierSensing
+                                                False -> ClassB SelfOrganizing
                            equippedWithDisplay <- getBit
                            equippedWithDigitalSelectiveCalling <- getBit
                            capableOfOperatingOverEntireMarineBand <- getBit

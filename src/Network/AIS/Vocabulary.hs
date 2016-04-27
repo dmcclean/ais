@@ -459,12 +459,12 @@ overallBeam :: VesselDimensions -> Length Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
 
 data StationClass = ClassA
-                  | ClassB (Maybe ClassBCoordinationType)
-  deriving (Eq, Show, Read)
+                  | ClassB (ClassBCoordinationType)
+  deriving (Eq, Ord, Show, Read)
 
 data ClassBCoordinationType = SelfOrganizing
                             | CarrierSensing
-  deriving (Eq, Show, Read)
+  deriving (Eq, Ord, Show, Read)
 
 data StationCapabilities = StationCapabilities { stationClass :: StationClass
                                                , equippedWithDisplay :: Bool
