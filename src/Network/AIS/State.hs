@@ -6,6 +6,7 @@ import Data.Text (Text)
 import Data.Word (Word16)
 import Network.AIS (AisMessage(..))
 import Network.AIS.Vocabulary
+import qualified Data.Set as S
 
 type Slot = Word16
 type SlotOffset = Word16
@@ -26,6 +27,36 @@ data StationState = StationState { displayName :: Maybe Text
                                  , lastReceivedStationsCount :: Maybe Word16
                                  }
   deriving (Eq, Show)
+
+data StationStereotype = BaseStation
+                       | MobileStation StationClass
+                       | SarAircraftStation
+                       | NavaidStation
+                       | EmergencyStation
+  deriving (Eq, Ord, Show, Read)
+
+newtype PossibleStationStereotype = PossibleStationStereotype (S.Set StationStereotype)
+  deriving (Eq)
+
+unknownStation :: PossibleStationStereotype
+unknownStation = PossibleStationStereotype . S.fromList $ [ BaseStation
+                                                          , MobileStation ClassA
+                                                          , MobileStation (ClassB SelfOrganizing)
+                                                          , MobileStation (ClassB CarrierSensing)
+                                                          , SarAircraftStation
+                                                          , NavaidStation
+                                                          , EmergencyStation
+                                                          ]
+
+compatibleWithStereotype :: AisMessage -> StationStereotype -> Bool
+compatibleWithStereotype (ClassAPositionReport { })      (MobileStation ClassA) = True
+compatibleWithStereotype (SafetyRelatedMessage { })      BaseStation = True
+compatibleWithStereotype (SafetyRelatedMessage { })      (MobileStation _) = True
+compatibleWithStereotype (SafetyRelatedMessage { })      SarAircraftStation = True
+compatibleWithStereotype m@(SafetyRelatedMessage { })    EmergencyStation = addressee m == Broadcast
+compatibleWithStereotype (SarAircraftPositionReport { }) SarAircraftStation = True
+compatibleWithStereotype (BaseStationReport { })         BaseStation = True
+compatibleWithStereotype _ _ = False
 
 data StationDirectory = StationDirectory { directoryLastUpdated :: Slot
                                          , ownStationID :: Maybe MMSI
