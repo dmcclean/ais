@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Network.AIS.State where
 
 import Data.Map.Strict (Map)
@@ -25,6 +27,7 @@ data StationState = StationState { displayName :: Maybe Text
                                  , lastSyncState :: SyncState
                                  , lastNavigationState :: Maybe NavigationalStatus
                                  , lastReceivedStationsCount :: Maybe Word16
+                                 , stationStereotype :: PossibleStationStereotype
                                  }
   deriving (Eq, Show)
 
@@ -32,11 +35,11 @@ data StationStereotype = BaseStation
                        | MobileStation StationClass
                        | SarAircraftStation
                        | NavaidStation
-                       | EmergencyStation
+                       | EmergencyStation EmergencyDeviceType
   deriving (Eq, Ord, Show, Read)
 
 newtype PossibleStationStereotype = PossibleStationStereotype (S.Set StationStereotype)
-  deriving (Eq)
+  deriving (Eq, Show)
 
 unknownStation :: PossibleStationStereotype
 unknownStation = PossibleStationStereotype . S.fromList $ [ BaseStation
@@ -45,17 +48,57 @@ unknownStation = PossibleStationStereotype . S.fromList $ [ BaseStation
                                                           , MobileStation (ClassB CarrierSensing)
                                                           , SarAircraftStation
                                                           , NavaidStation
-                                                          , EmergencyStation
+                                                          , EmergencyStation SarTransponder
+                                                          , EmergencyStation MobDevice
+                                                          , EmergencyStation Epirb
                                                           ]
 
+anyMobileStation :: PossibleStationStereotype
+anyMobileStation = PossibleStationStereotype . S.fromList $ [ MobileStation ClassA
+                                                            , MobileStation (ClassB SelfOrganizing)
+                                                            , MobileStation (ClassB CarrierSensing)
+                                                            ]
+
+unconventionalStation :: PossibleStationStereotype
+unconventionalStation = PossibleStationStereotype S.empty
+
+singleton :: StationStereotype -> PossibleStationStereotype
+singleton = PossibleStationStereotype . S.singleton
+
+possibleStationStereotypes :: MMSIType -> PossibleStationStereotype
+possibleStationStereotypes (MmsiShipStation _) = anyMobileStation
+possibleStationStereotypes (MmsiCraftAssociatedWithParentShip _) = anyMobileStation
+possibleStationStereotypes (MmsiCoastStation _) = singleton BaseStation
+possibleStationStereotypes (MmsiSarAircraft _) = singleton SarAircraftStation
+possibleStationStereotypes (MmsiNavigationalAid _) = singleton NavaidStation
+possibleStationStereotypes (MmsiEmergencyDevice ty) = singleton (EmergencyStation ty)
+possibleStationStereotypes _ = unconventionalStation
+
 compatibleWithStereotype :: AisMessage -> StationStereotype -> Bool
-compatibleWithStereotype (ClassAPositionReport { })      (MobileStation ClassA) = True
-compatibleWithStereotype (SafetyRelatedMessage { })      BaseStation = True
-compatibleWithStereotype (SafetyRelatedMessage { })      (MobileStation _) = True
-compatibleWithStereotype (SafetyRelatedMessage { })      SarAircraftStation = True
-compatibleWithStereotype m@(SafetyRelatedMessage { })    EmergencyStation = addressee m == Broadcast
-compatibleWithStereotype (SarAircraftPositionReport { }) SarAircraftStation = True
-compatibleWithStereotype (BaseStationReport { })         BaseStation = True
+compatibleWithStereotype (ClassAPositionReport { navigationalStatus })    (MobileStation ClassA) = navigationalStatus /= NavAisSartMobEpirb
+compatibleWithStereotype (ClassAPositionReport { navigationalStatus })    (EmergencyStation _) = navigationalStatus == NavAisSartMobEpirb || navigationalStatus == NavUndefined
+compatibleWithStereotype (StandardClassBPositionReport { capabilities })  (MobileStation c@(ClassB _)) = stationClass capabilities == c
+compatibleWithStereotype (ExtendedClassBPositionReport { })               (MobileStation (ClassB _)) = True
+compatibleWithStereotype (SarAircraftPositionReport { })                  SarAircraftStation = True
+compatibleWithStereotype (ClassAStaticData { })                           (MobileStation ClassA) = True
+compatibleWithStereotype (ClassAStaticData { typeOfShipAndCargo })        SarAircraftStation = typeOfShipAndCargo == TypeOfShipAndCargo 0
+compatibleWithStereotype (StaticDataReportPartA {})                       (MobileStation _) = True
+compatibleWithStereotype (StaticDataReportPartA {})                       SarAircraftStation = True
+compatibleWithStereotype (StaticDataReportPartA {})                       BaseStation = True
+compatibleWithStereotype (StaticDataReportPartB {})                       (MobileStation _) = True
+compatibleWithStereotype (StaticDataReportPartB {})                       SarAircraftStation = True
+compatibleWithStereotype (StaticDataReportPartB {})                       BaseStation = True
+compatibleWithStereotype (SafetyRelatedMessage { })                       BaseStation = True
+compatibleWithStereotype (SafetyRelatedMessage { })                       (MobileStation _) = True
+compatibleWithStereotype (SafetyRelatedMessage { })                       SarAircraftStation = True
+compatibleWithStereotype (SafetyRelatedMessage { addressee })             (EmergencyStation _) = addressee == Broadcast -- TODO: validate text?
+compatibleWithStereotype (BaseStationReport { })                          BaseStation = True
+compatibleWithStereotype (ChannelManagementCommand { })                   BaseStation = True
+compatibleWithStereotype (GroupAssignmentCommand { })                     BaseStation = True
+compatibleWithStereotype (AssignmentModeCommand { })                      BaseStation = True
+compatibleWithStereotype (DataLinkManagementMessage { })                  BaseStation = True
+compatibleWithStereotype (BaseStationCoverageAreaMessage { })             BaseStation = True
+compatibleWithStereotype (DgnssBroadcastMessage { })                      BaseStation = True
 compatibleWithStereotype _ _ = False
 
 data StationDirectory = StationDirectory { directoryLastUpdated :: Slot
@@ -97,6 +140,7 @@ updateStationDirectory t c m d | Just (userID m) == ownStationID d = d -- ignore
                                        , lastSyncState = SyncPeer
                                        , lastNavigationState = Nothing
                                        , lastReceivedStationsCount = Nothing
+                                       , stationStereotype = unknownStation
                                        }
     f = integrateMessage m . integrateMetadata
     extractPos :: AisMessage -> Maybe (Longitude, Latitude)

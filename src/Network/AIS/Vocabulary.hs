@@ -52,12 +52,15 @@ data MMSIType = MmsiInvalid
               | MmsiCoastStation MID
               | MmsiSarAircraft MID
               | MmsiHandheldStation
-              | MmsiSarTransponder
-              | MmsiMobDevice
-              | MmsiEpirb
+              | MmsiEmergencyDevice EmergencyDeviceType
               | MmsiCraftAssociatedWithParentShip MID
               | MmsiNavigationalAid MID
   deriving (Eq, Ord, Show)
+
+data EmergencyDeviceType = SarTransponder
+                         | MobDevice
+                         | Epirb
+  deriving (Eq, Ord, Show, Read)
 
 -- | Determines the type of an 'MMSI' using the structure documented in ITU-R M.585-7.
 mmsiType :: MMSI -> MMSIType
@@ -66,9 +69,9 @@ mmsiType (MMSI n) | n <= 999999999 = case digits n of
                                        (0:ds)     | Just m <- takeMid ds -> MmsiGroupShipStation m
                                        (1:1:1:ds) | Just m <- takeMid ds -> MmsiSarAircraft m
                                        (8:_)                             -> MmsiHandheldStation
-                                       (9:7:0:_)                         -> MmsiSarTransponder
-                                       (9:7:2:_)                         -> MmsiMobDevice
-                                       (9:7:4:_)                         -> MmsiEpirb
+                                       (9:7:0:_)                         -> MmsiEmergencyDevice SarTransponder
+                                       (9:7:2:_)                         -> MmsiEmergencyDevice MobDevice
+                                       (9:7:4:_)                         -> MmsiEmergencyDevice Epirb
                                        (9:8:ds)   | Just m <- takeMid ds -> MmsiCraftAssociatedWithParentShip m
                                        (9:9:ds)   | Just m <- takeMid ds -> MmsiNavigationalAid m
                                        ds         | Just m <- takeMid ds -> MmsiShipStation m
