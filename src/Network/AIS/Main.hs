@@ -2,7 +2,6 @@ module Network.AIS.Main where
 
 import Network.AIS
 import Network.AIS.NMEA
-import Control.Monad.Trans
 import Control.Monad.Trans.Resource (runResourceT)
 import Data.Binary.Strict.BitGet
 import Data.ByteString
@@ -18,18 +17,11 @@ main = do
          let path = "C:\\Users\\Douglas\\Downloads\\nmea-sample\\nmea-sample.txt"
          let source = sourceFile path
          let cond = decode utf8 =$= Data.Conduit.Text.lines =$= CL.isolate 10000 =$= conduitParser aisMessage =$= CL.map snd =$= mergeFragments =$= CL.map (\m -> runBitGet m getMessage) =$= CL.filter filt =$= CL.map show
-         {-
-         let sink = transPipe lift $ CL.mapM_ (\x -> do
-                                                       Prelude.putStrLn x
-                                                       _ <- Prelude.getLine
-                                                       return ())
-         -}
-         let sink2 = CL.map (++ "\n") =$= CL.map T.pack =$= encode utf8 =$ sinkFile "C:\\Users\\Douglas\\Downloads\\nmea-sample\\decoded.txt"
-         runResourceT (source $$ cond =$ sink2)
+         let sink = CL.map (++ "\n") =$= CL.map T.pack =$= encode utf8 =$ sinkFile "C:\\Users\\Douglas\\Downloads\\nmea-sample\\decoded.txt"
+         runResourceT (source $$ cond =$ sink)
 
 filt :: Either String AisMessage -> Bool
-filt (Left _) = True
-filt (Right m) = True -- not $ isPositionReport m
+filt _ = True
 
 mergeFragments :: (Monad m) => Conduit AisMessageFragment m ByteString
 mergeFragments = do
