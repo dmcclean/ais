@@ -146,7 +146,7 @@ data AisMessage = ClassAPositionReport
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
-                  , utcTime :: UTCTime
+                  , utcTime :: Maybe UTCTime
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
@@ -165,7 +165,7 @@ data AisMessage = ClassAPositionReport
                   { messageType :: MessageID
                   , repeatIndicator :: RepeatIndicator
                   , userID :: MMSI
-                  , utcTime :: UTCTime
+                  , utcTime :: Maybe UTCTime
                   , positionAccuracy :: Bool
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
@@ -1062,8 +1062,9 @@ getLongRangePositionReport = do
                                skip 1
                                return $ LongRangePositionReport { .. }
 
-makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> UTCTime
-makeUtcTime y mo d h m s = UTCTime { .. }
+makeUtcTime :: Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Word16 -> Maybe UTCTime
+makeUtcTime y mo d h m s | valid, Just utctDay <- fromGregorianValid y' mo' d' = Just $ UTCTime { .. }
+                         | otherwise = Nothing
   where
     y' = fromIntegral y
     mo' = fromIntegral mo
@@ -1071,7 +1072,7 @@ makeUtcTime y mo d h m s = UTCTime { .. }
     h' = fromIntegral h
     m' = fromIntegral m
     s' = fromIntegral s
-    utctDay = fromGregorian y' mo' d'
+    valid = 0 < y && h < 24 && m < 60 && s < 61
     utctDayTime = secondsToDiffTime $ s' + 60 * m' + 60 * 60 * h'
 
 example :: ByteString
