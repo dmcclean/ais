@@ -13,11 +13,13 @@ module Network.AIS.NMEA
 where
 
 import Data.Attoparsec.Text
+import Data.Bits
 import Data.ByteString as BS
 import Data.ByteString.Lazy (toStrict)
 import Data.Char
 import Data.Text as T
 import Data.Binary.BitPut
+import Data.Word (Word8)
 import Network.AIS.Vocabulary (Channel(..))
 
 data AisMessageFragment = AisMessageFragment 
@@ -27,6 +29,7 @@ data AisMessageFragment = AisMessageFragment
                     , channelCode :: Maybe Channel
                     , payloadFragment :: ByteString
                     , fillBits :: Int  
+                    , checksumValid :: Bool
                     }
   deriving (Eq, Show)
 
@@ -40,25 +43,33 @@ parseAisMessagePackedInNmeaMessage = parseOnly (aisMessage <* endOfInput)
 aisMessage :: Parser AisMessageFragment
 aisMessage = do
                _ <- char '!'
-               _ <- string "AIVDM"
-               _ <- char ','
-               fragments <- decimal
-               _ <- char ','
-               fragmentNumber <- decimal
-               _ <- char ','
-               messageID <- option 0 decimal
-               _ <- char ','
-               channelCode <- option Nothing $ parseChannel <$> satisfy (inClass "0-9A-Za-z")
-               _ <- char ','
-               rawPayload <- many' $ satisfy (inClass "0-9A-Wa-w:;<=>?@`")
-               _ <- char ','
-               fillBits <- decimal
+               (t, result) <- match checkable
                _ <- char '*'
-               _ <- anyChar
-               _ <- anyChar
+               h <- anyChar
+               l <- anyChar
+               let statedChecksum = fromIntegral $ 16 * digitToInt h + digitToInt l
+               let computedChecksum = T.foldl' (\x c -> x `xor` (fromIntegral $ ord c)) (0 :: Word8) t
                skipSpace
-               let payloadFragment = translate rawPayload fillBits
-               return $ AisMessageFragment { .. }
+               return $ result { checksumValid = statedChecksum == computedChecksum }
+  where
+    checkable = do
+                  _ <- string "AIVDM"
+                  _ <- char ','
+                  fragments <- decimal
+                  _ <- char ','
+                  fragmentNumber <- decimal
+                  _ <- char ','
+                  messageID <- option 0 decimal
+                  _ <- char ','
+                  channelCode <- option Nothing $ parseChannel <$> satisfy (inClass "0-9A-Za-z")
+                  _ <- char ','
+                  rawPayload <- many' $ satisfy (inClass "0-9A-Wa-w:;<=>?@`")
+                  _ <- char ','
+                  fillBits <- decimal
+                  let payloadFragment = translate rawPayload fillBits
+                  let checksumValid = True
+                  return $ AisMessageFragment { .. }
+
 
 parseChannel :: Char -> Maybe Channel
 parseChannel 'A' = Just AisChannelA
