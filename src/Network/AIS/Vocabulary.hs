@@ -292,8 +292,9 @@ data Interrogation = Interrogation { interrogatedID :: MMSI -- ^ The 'MMSI' of t
                                    }
   deriving (Eq, Show)
 
-data Addressee = Broadcast
-               | Addressed MMSI
+-- | The station or stations to whom a message is addressed.
+data Addressee = Broadcast -- ^ The message is addressed to all stations.
+               | Addressed MMSI -- ^ The message is addressed to the specified station or group of ship stations.
   deriving (Eq, Show)
 
 data Reservation = Reservation { reservedOffsetNumber :: Word16
@@ -461,12 +462,14 @@ overallLength dims = forwardOfReferencePoint dims + aftOfReferencePoint dims
 overallBeam :: VesselDimensions -> Length Word8
 overallBeam dims = portOfReferencePoint dims + starboardOfReferencePoint dims
 
-data StationClass = ClassA
-                  | ClassB (ClassBCoordinationType)
+-- | The class of an AIS mobile station.
+data StationClass = ClassA -- ^ A Class A station.
+                  | ClassB (ClassBCoordinationType) -- ^ A Class B station of the specified 'CoordinationType'.
   deriving (Eq, Ord, Show, Read)
 
-data ClassBCoordinationType = SelfOrganizing
-                            | CarrierSensing
+-- | The coordination type of an AIS mobile station.
+data ClassBCoordinationType = SelfOrganizing -- ^ The station is capable of participating in the SOTDMA access scheme.
+                            | CarrierSensing -- ^ The station uses the CSTDMA access scheme.
   deriving (Eq, Ord, Show, Read)
 
 data StationCapabilities = StationCapabilities { stationClass :: StationClass
