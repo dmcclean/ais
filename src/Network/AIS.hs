@@ -188,7 +188,7 @@ data AisMessage = ClassAPositionReport
                   , eta :: Word32 -- TODO: improve type of this field, which is month / day / hour / minute
                   , draught :: LengthDecimeters Word8
                   , destination :: Text
-                  , dteNotReady :: Bool
+                  , dteReady :: Bool
                   }
                 | StaticDataReportPartA
                   { messageType :: MessageID
@@ -266,7 +266,7 @@ data AisMessage = ClassAPositionReport
                   , timeStamp :: Maybe Word8
                   , positionFixingStatus :: PositionFixingStatus
                   , altitudeSensor :: AltitudeSensor
-                  , dteNotReady :: Bool
+                  , dteReady :: Bool
                   , assignedModeFlag :: Bool
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
@@ -305,7 +305,7 @@ data AisMessage = ClassAPositionReport
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
                   , raimFlag :: Bool
-                  , dteNotReady :: Bool
+                  , dteReady :: Bool
                   , assignedModeFlag :: Bool
                   }
                 | ChannelManagementCommand
@@ -649,7 +649,7 @@ getSarAircraftPositionReport = do
                                  (timeStamp, positionFixingStatus) <- getTimeStamp
                                  altitudeSensor <- getAltitudeSensor
                                  skip 7
-                                 dteNotReady <- getBit
+                                 dteReady <- not <$> getBit
                                  skip 3
                                  assignedModeFlag <- getBit
                                  raimFlag <- getBit
@@ -853,7 +853,7 @@ getClassAStaticData = do
                         eta <- getAsWord32 20
                         draught <- fmap coerce $ getAsWord8 8
                         destination <- getSixBitText 20
-                        dteNotReady <- getBit
+                        dteReady <- not <$> getBit
                         skip 1
                         return $ ClassAStaticData { .. }
 
@@ -999,7 +999,7 @@ getExtendedClassBPositionReport = do
                                     vesselDimensions <- getVesselDimensions
                                     positionFixingDevice <- getPositionFixingDevice
                                     raimFlag <- getBit
-                                    dteNotReady <- getBit
+                                    dteReady <- not <$> getBit
                                     assignedModeFlag <- getBit
                                     skip 4
                                     return $ ExtendedClassBPositionReport { .. }
