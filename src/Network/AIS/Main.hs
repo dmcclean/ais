@@ -1,4 +1,4 @@
-module Network.AIS.Main where
+module Main where
 
 import Network.AIS
 import Network.AIS.NMEA
