@@ -151,7 +151,7 @@ data AisMessage = ClassAPositionReport
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
                   , positionFixingDevice :: PositionFixingDevice
-                  , doNotSuppressLongRangeMessages :: Bool
+                  , suppressLongRangeMessages :: Bool
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
                   }
@@ -170,7 +170,7 @@ data AisMessage = ClassAPositionReport
                   , longitude :: Maybe Longitude
                   , latitude :: Maybe Latitude
                   , positionFixingDevice :: PositionFixingDevice
-                  , doNotSuppressLongRangeMessages :: Bool
+                  , suppressLongRangeMessages :: Bool
                   , raimFlag :: Bool
                   , communicationsState :: CommunicationsState
                   }
@@ -729,7 +729,7 @@ getBaseStationReportMessage = do
                                 longitude <- getLongitude
                                 latitude <- getLatitude
                                 positionFixingDevice <- getPositionFixingDevice
-                                doNotSuppressLongRangeMessages <- getBit
+                                suppressLongRangeMessages <- not <$> getBit
                                 skip 9
                                 raimFlag <- getBit
                                 communicationsState <- getSOTDMACommunicationsState
@@ -831,7 +831,7 @@ getTimeResponse = do
                     longitude <- getLongitude
                     latitude <- getLatitude
                     positionFixingDevice <- getPositionFixingDevice
-                    doNotSuppressLongRangeMessages <- getBit
+                    suppressLongRangeMessages <- not <$> getBit
                     skip 9
                     raimFlag <- getBit
                     communicationsState <- getSOTDMACommunicationsState
