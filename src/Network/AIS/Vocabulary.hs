@@ -520,13 +520,13 @@ decodeTypeOfShip (TypeOfShipAndCargo n) = decode n
     decode 55 = simple LawEnforcementVessel
     decode 58 = simple MedicalTransport
     decode 59 = simple NonPartyToArmedConflict
-    decode n' | 20 <= n' && n' <= 29 = possiblyHazardous WingInGroundEffect
-              | 40 <= n' && n' <= 49 = possiblyHazardous HighSpeedCraft
-              | 60 <= n' && n' <= 69 = possiblyHazardous PassengerShip
-              | 70 <= n' && n' <= 79 = possiblyHazardous CargoShip
-              | 80 <= n' && n' <= 89 = possiblyHazardous Tanker
+    decode n' | 20 <= n' && n' <= 29 = category WingInGroundEffect
+              | 40 <= n' && n' <= 49 = category HighSpeedCraft
+              | 60 <= n' && n' <= 69 = category PassengerShip
+              | 70 <= n' && n' <= 79 = category CargoShip
+              | 80 <= n' && n' <= 89 = category Tanker
               | otherwise            = (Nothing, Nothing)
-    possiblyHazardous t = (Just t, hazard)
+    category t = (Just t, hazard)
     simple t = (Just t, Nothing)
     hazard = hazard' (n `mod` 10)
     hazard' 1 = Just HazardX

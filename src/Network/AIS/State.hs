@@ -27,6 +27,7 @@ data StationState = StationState { displayName :: Maybe Text
                                  , lastSyncState :: SyncState
                                  , lastNavigationState :: Maybe NavigationalStatus
                                  , lastReceivedStationsCount :: Maybe Word16
+                                 , lastReceivedCoverageArea :: Maybe Region
                                  , stationStereotype :: PossibleStationStereotype
                                  }
   deriving (Eq, Show)
@@ -140,6 +141,7 @@ updateStationDirectory t c m d | Just (userID m) == ownStationID d = d -- ignore
                                        , lastSyncState = SyncPeer
                                        , lastNavigationState = Nothing
                                        , lastReceivedStationsCount = Nothing
+                                       , lastReceivedCoverageArea = Nothing
                                        , stationStereotype = unknownStation
                                        }
     f = integrateMessage m . integrateMetadata
@@ -151,7 +153,7 @@ updateStationDirectory t c m d | Just (userID m) == ownStationID d = d -- ignore
     integrateMetadata :: StationState -> StationState
     integrateMetadata s = s { lastReceived = Just t, lastReceivedChannel = c }
     integrateMessage :: AisMessage -> StationState -> StationState
-    integrateMessage (ClassAPositionReport {}) s = s { lastNavigationState = Just $ navigationalStatus m, lastPosition = extractPos m }
+    integrateMessage (ClassAPositionReport { navigationalStatus }) s = s { lastNavigationState = Just $ navigationalStatus, lastPosition = extractPos m }
     integrateMessage (BaseStationReport {}) s = s { lastPosition = extractPos m }
     integrateMessage (TimeResponse {}) s = s { lastPosition = extractPos m }
     integrateMessage (AidToNavigationReport {}) s = s { lastPosition = extractPos m }
@@ -160,4 +162,5 @@ updateStationDirectory t c m d | Just (userID m) == ownStationID d = d -- ignore
     integrateMessage (StandardClassBPositionReport {}) s = s { lastPosition = extractPos m }
     integrateMessage (ExtendedClassBPositionReport {}) s = s { lastPosition = extractPos m }
     integrateMessage (LongRangePositionReport {}) s = s { lastPosition = extractPos m }
+    integrateMessage (BaseStationCoverageAreaMessage { region }) s = s { lastReceivedCoverageArea = Just $ region }
     integrateMessage _ s = s
