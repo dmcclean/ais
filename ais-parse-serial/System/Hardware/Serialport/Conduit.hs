@@ -12,9 +12,9 @@ import System.Hardware.Serialport
 sourceSerial :: forall m.(MonadIO m, MonadResource m) => FilePath -> SerialPortSettings -> Source m ByteString
 sourceSerial path settings = bracketP (openSerial path settings) closeSerial go
   where
-  	go :: SerialPort -> Source m ByteString
-  	go port = do
-  		        r <- liftIO $ recv port 256
-  		        case BS.length r of
-  		          0 -> (liftIO $ threadDelay 5000) >> go port
-  		          _ -> (yield r) >> go port
+    go :: SerialPort -> Source m ByteString
+    go port = do
+              r <- liftIO $ recv port 256
+              case BS.length r of
+                0 -> (liftIO $ threadDelay 5000) >> go port
+                _ -> (yield r) >> go port
