@@ -11,7 +11,6 @@ import Data.Binary.Strict.BitGet
 import Data.ByteString
 import Data.Conduit
 import Data.Conduit.Attoparsec
-import Data.Conduit.Binary
 import qualified Data.Conduit.List as CL
 import Data.Conduit.Text
 import qualified Data.Text as T
