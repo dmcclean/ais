@@ -3,9 +3,8 @@
 
 module Network.AIS.NMEA
 (
-  parseAis
-, parseAisMessagePackedInNmeaMessage
-, translateChar
+  parseAisFragment
+, parseAisFragment'
 , aisMessage
 , merge
 , AisMessageFragment(..)
@@ -22,23 +21,23 @@ import Data.Binary.BitPut
 import Data.Word (Word8)
 import Network.AIS.Vocabulary (Channel(..))
 
+-- | A fragment of an AIS message.
 data AisMessageFragment = AisMessageFragment 
-                    { fragments :: Int
-                    , fragmentNumber :: Int
-                    , messageID :: Int
-                    , channelCode :: Maybe Channel
-                    , payloadFragment :: ByteString
-                    , fillBits :: Int  
-                    , checksumValid :: Bool
+                    { fragments :: Int -- ^ The total number of fragments in the message.
+                    , fragmentNumber :: Int -- ^ The 1-indexed sequence number of the fragment within its message.
+                    , messageID :: Int -- ^ An identifier for the message of which this is a fragment.
+                    , channelCode :: Maybe Channel -- ^ An optional 'Channel' indicating where the message of which this is a fragment was received.
+                    , payloadFragment :: ByteString -- ^ A fragment of the message itself.
+                    , fillBits :: Int -- ^ The number of fill bits added to the end of the message payload.
+                    , checksumValid :: Bool -- ^ Whether the message fragment carried a valid checksum.
                     }
   deriving (Eq, Show)
 
-parseAis :: Text -> AisMessageFragment
-parseAis input = let (Right output) = parseAisMessagePackedInNmeaMessage input
-                  in output
+parseAisFragment' :: Text -> Maybe AisMessageFragment
+parseAisFragment' = either (const Nothing) Just . parseAisFragment
 
-parseAisMessagePackedInNmeaMessage :: Text -> Either String AisMessageFragment
-parseAisMessagePackedInNmeaMessage = parseOnly (aisMessage <* endOfInput)
+parseAisFragment :: Text -> Either String AisMessageFragment
+parseAisFragment = parseOnly (aisMessage <* endOfInput)
 
 aisMessage :: Parser AisMessageFragment
 aisMessage = do
@@ -69,7 +68,6 @@ aisMessage = do
                   let payloadFragment = translate rawPayload fillBits
                   let checksumValid = True
                   return $ AisMessageFragment { .. }
-
 
 parseChannel :: Char -> Maybe Channel
 parseChannel 'A' = Just AisChannelA
