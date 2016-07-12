@@ -77,10 +77,10 @@ instance Show MMSI where
 newtype MID = MID Word16
   deriving (Eq, Ord, Show)
 
+-- | Converts an integer to a 'MID' if it represents a valid 'MID', and to 'Nothing' otherwise.
 toMid :: (Ord a, Integral a) => a -> Maybe MID
-toMid n = if 200 <= n && n <= 799
-            then Just . MID $ fromIntegral n
-            else Nothing
+toMid n | 200 <= n && n <= 799 = Just . MID $ fromIntegral n
+        | otherwise            = Nothing
 
 -- | The type of an 'MMSI'.
 --
