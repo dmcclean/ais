@@ -5,6 +5,47 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Network.AIS.Vocabulary
+(
+  -- * Identifiers
+  MMSI(..), MMSIType(..), mmsiType, MID(..), toMid, EmergencyDeviceType(..), IMONumber(..), isValidImoNumber
+  -- * Maritime Information
+  -- ** Ship Types
+, ShipType(..), TypeOfShipAndCargo(..), HazardOrPollutantCategory(..), decodeTypeOfShip, VesselDimensions(..), overallLength, overallBeam
+  -- ** Aid to Navigation Types
+, AidToNavigation(..), isFloatingAtoN, isFixedAtoN
+  -- ** Navigational Information
+, NavigationalStatus(..), SpecialManeuverIndicator(..)
+  -- *** Position
+, Longitude, Latitude
+  -- *** Length
+, LengthDecimeters, LengthNauticalMiles
+  -- *** Velocity
+, Speed(..), VelocityKnots, VelocityTenthsOfKnot
+  -- *** Time
+, TimeMinutes
+  -- *** Angles
+, AngleDegrees, AngleTenthsOfDegree
+  -- *** Rate Of Turn
+, RateOfTurn(..), PackedRateOfTurn, UnpackedRateOfTurn, unpackRateOfTurn, packRateOfTurn
+  -- *** Altitude
+, Altitude(..)
+  -- ** Position Fixing Information
+, PositionFixingDevice(..), PositionFixingStatus(..), AltitudeSensor(..)
+  -- * Protocol Information
+  -- ** Message Types
+, MessageID(..)
+  -- ** Protocol State
+, RepeatIndicator, SyncState(..), CommunicationsState(..), SOTDMASubmessage(..)
+  -- ** Station Metadata
+, StationCapabilities(..), classACapabilities, StationClass(..), ClassBCoordinationType(..), StationType(..)
+  -- ** Transmission Metadata
+, Channel(..), channelFrequency, TransmissionMode(..)
+  -- ** Addressing, Interrogation, and Message Control
+, Addressee(..), Region(..), TargetDesignation(..), Interrogation(..), Acknowledgement(..)
+, Assignment(..), AssignedReportingInterval(..), Reservation(..), isValidReservation
+  -- ** Application-Specific Messages
+, ApplicationIdentifier(..)
+)
 where
 
 import qualified Data.ExactPi.TypeLevel as E
@@ -57,9 +98,10 @@ data MMSIType = MmsiInvalid
               | MmsiNavigationalAid MID
   deriving (Eq, Ord, Show)
 
-data EmergencyDeviceType = SarTransponder
-                         | MobDevice
-                         | Epirb
+-- | The type of an emergency device.
+data EmergencyDeviceType = SarTransponder -- ^ The device is a search-and-rescue transponder.
+                         | MobDevice -- ^ The device is a man overboard device.
+                         | Epirb -- ^ The device is an emergency position-indicating radiobeacon.
   deriving (Eq, Ord, Show, Read)
 
 -- | Determines the type of an 'MMSI' using the structure documented in ITU-R M.585-7.
