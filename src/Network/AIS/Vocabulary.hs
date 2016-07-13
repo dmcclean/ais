@@ -7,7 +7,7 @@
 module Network.AIS.Vocabulary
 (
   -- * Identifiers
-  MMSI(..), MMSIType(..), mmsiType, MID(..), toMid, EmergencyDeviceType(..), IMONumber(..), isValidImoNumber
+  MMSI(..), MMSIType(..), mmsiType, MID(..), extractMID, toMid, EmergencyDeviceType(..), IMONumber(..), isValidImoNumber
   -- * Maritime Information
   -- ** Ship Types
 , ShipType(..), TypeOfShipAndCargo(..), HazardOrPollutantCategory(..), decodeTypeOfShip, VesselDimensions(..), overallLength, overallBeam
@@ -87,16 +87,26 @@ toMid n | 200 <= n && n <= 799 = Just . MID $ fromIntegral n
 -- MMSIs with certain leading digits are reserved for certain
 -- classes of stations. For some of these classes, the MMSI also
 -- includes 'MID' identifying the authority that issues the MMSI.
-data MMSIType = MmsiInvalid
-              | MmsiShipStation MID
-              | MmsiGroupShipStation MID
-              | MmsiCoastStation MID
-              | MmsiSarAircraft MID
-              | MmsiHandheldStation
-              | MmsiEmergencyDevice EmergencyDeviceType
-              | MmsiCraftAssociatedWithParentShip MID
-              | MmsiNavigationalAid MID
+data MMSIType = MmsiInvalid -- ^ The MMSI is not valid.
+              | MmsiShipStation MID -- ^ The MMSI belongs to a ship station with the specified 'MID'.
+              | MmsiGroupShipStation MID -- ^ The MMSI belongs to a group of ship stations with the specified 'MID'.
+              | MmsiCoastStation MID -- ^ The MMSI belongs to a coast station with the specified 'MID'.
+              | MmsiSarAircraft MID -- ^ The MMSI belongs to a search-and-rescue aircraft with the specified 'MID'.
+              | MmsiHandheldStation -- ^ The MMSI belongs to a handheld station.
+              | MmsiEmergencyDevice EmergencyDeviceType -- ^ The MMSI belongs to an emergency device of the specified type.
+              | MmsiCraftAssociatedWithParentShip MID -- ^ The MMSI belongs to a craft associated with a parent ship with the specified 'MID'.
+              | MmsiNavigationalAid MID -- ^ The MMSI belongs to a navigational aid with the specified 'MID'.
   deriving (Eq, Ord, Show)
+
+-- | Certain 'MMSIType's include the issuing 'MID'. This function extracts that 'MID' when it exists.
+extractMID :: MMSIType -> Maybe MID
+extractMID (MmsiShipStation mid)                   = Just mid
+extractMID (MmsiGroupShipStation mid)              = Just mid
+extractMID (MmsiCoastStation mid)                  = Just mid
+extractMID (MmsiSarAircraft mid)                   = Just mid
+extractMID (MmsiCraftAssociatedWithParentShip mid) = Just mid
+extractMID (MmsiNavigationalAid mid)               = Just mid
+extractMID _                                       = Nothing
 
 -- | The type of an emergency device.
 data EmergencyDeviceType = SarTransponder -- ^ The device is a search-and-rescue transponder.
