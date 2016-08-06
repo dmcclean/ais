@@ -22,7 +22,7 @@ module Network.AIS.Vocabulary
   -- *** Velocity
 , Speed(..), VelocityKnots, VelocityTenthsOfKnot
   -- *** Time
-, TimeMinutes
+, TimeMinutes, CalendarTime(..)
   -- *** Angles
 , AngleDegrees, AngleTenthsOfDegree
   -- *** Rate Of Turn
@@ -496,6 +496,13 @@ type AngleDegrees = Direction 360 Word16
 type LengthNauticalMiles a = SQuantity (E.ExactNatural 1852) DLength a
 
 type TimeMinutes a = SQuantity (E.ExactNatural 60) DTime a
+
+-- | A time expressed as a month, day, hour, and minute where each item is optional.
+data CalendarTime = CalendarTime { calMonth :: Maybe Word8
+                                 , calDay :: Maybe Word8
+                                 , calHour :: Maybe Word8
+                                 , calMinute :: Maybe Word8 }
+  deriving (Eq, Show)
 
 type LengthDecimeters a = SQuantity (E.One E./ E.ExactNatural 10) DLength a
 

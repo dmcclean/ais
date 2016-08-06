@@ -185,7 +185,7 @@ data AisMessage = ClassAPositionReport
                   , typeOfShipAndCargo :: TypeOfShipAndCargo
                   , vesselDimensions :: VesselDimensions
                   , positionFixingDevice :: PositionFixingDevice
-                  , eta :: Word32 -- TODO: improve type of this field, which is month / day / hour / minute
+                  , eta :: CalendarTime
                   , draught :: LengthDecimeters Word8
                   , destination :: Text
                   , dteReady :: Bool
@@ -535,6 +535,18 @@ getRegion = do
               Just south <- getLowResolutionLatitude
               return $ Region { .. }
 
+getCalendarTime :: BitGet CalendarTime
+getCalendarTime = do
+                    calMonth  <- whenValid (\x -> 1 <= x && x <= 12) <$> getAsWord8 4
+                    calDay    <- whenValid (\x -> 1 <= x && x <= 31) <$> getAsWord8 5
+                    calHour   <- whenValid (< 24) <$> getAsWord8 5
+                    calMinute <- whenValid (< 60) <$> getAsWord8 6
+                    return $ CalendarTime { .. }
+  where
+    whenValid :: (a -> Bool) -> a -> Maybe a
+    whenValid p x | p x       = Just x
+                  | otherwise = Nothing
+
 getSOTDMACommunicationsState :: BitGet CommunicationsState
 getSOTDMACommunicationsState = do
                                  syncState <- getSyncState
@@ -850,7 +862,7 @@ getClassAStaticData = do
                         typeOfShipAndCargo <- getTypeOfShipAndCargo
                         vesselDimensions <- getVesselDimensions
                         positionFixingDevice <- getPositionFixingDevice
-                        eta <- getAsWord32 20
+                        eta <- getCalendarTime
                         draught <- fmap coerce $ getAsWord8 8
                         destination <- getSixBitText 20
                         dteReady <- not <$> getBit

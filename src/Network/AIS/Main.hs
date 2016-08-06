@@ -14,10 +14,10 @@ import qualified Data.Text as T
 
 main :: IO ()
 main = do
-         let path = "C:\\Users\\Douglas\\Downloads\\nmea-sample\\nmea-sample.txt"
+         let path = "C:\\Users\\Doug\\Downloads\\putty.log"
          let source = sourceFile path
          let cond = decode utf8 =$= Data.Conduit.Text.lines =$= CL.isolate 10000 =$= conduitParser aisMessage =$= CL.map snd =$= mergeFragments =$= CL.map (\m -> runBitGet m getMessage) =$= CL.filter filt =$= CL.map show
-         let sink = CL.map (++ "\n") =$= CL.map T.pack =$= encode utf8 =$ sinkFile "C:\\Users\\Douglas\\Downloads\\nmea-sample\\decoded.txt"
+         let sink = CL.map (++ "\n") =$= CL.map T.pack =$= encode utf8 =$ sinkFile "C:\\Users\\Doug\\Downloads\\car-trip-decoded.txt"
          runResourceT (source $$ cond =$ sink)
 
 filt :: Either String AisMessage -> Bool
